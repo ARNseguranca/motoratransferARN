@@ -1,86 +1,70 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Coleta Transfer Inauguração</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Coleta Transfer Inauguração - Driver</title>
+
+<!-- estilos mobile-first -->
 <style>
-  /* ====== APP / MOBILE FIRST STYLES ====== */
   :root{
-    --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --accent-2:#00b89c;
-    --panel: rgba(255,255,255,0.03);
+    --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.08);
   }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:
-    linear-gradient(180deg,var(--bg1),var(--bg2)); color:#e6fff9; -webkit-font-smoothing:antialiased;}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb;}
   /* header */
-  .hdr{
-    height:56px; display:flex; align-items:center; gap:12px; padding:8px 14px;
-    background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-    border-bottom:1px solid rgba(255,255,255,0.02);
-    position:fixed; left:0; right:0; top:0; z-index:9999;
-  }
-  .hdr .logo{ width:36px; height:36px; border-radius:8px; background:#fff; display:inline-block; }
-  .hdr .title{ font-weight:700; font-size:16px; color:var(--accent); letter-spacing:0.8px; }
-  /* app container */
-  .app{ padding:68px 10px 12px 10px; box-sizing:border-box; height:calc(100vh - 56px); display:flex; flex-direction:column; gap:8px; }
-  /* controls */
-  .controls{ display:flex; gap:8px; align-items:center; }
-  .select{ flex:1; height:46px; border-radius:10px; border:none; padding:0 12px; background:rgba(255,255,255,0.02); color:#fff; font-size:15px; }
-  .btn{ background:var(--accent); color:#000; border:none; padding:10px 12px; border-radius:10px; font-weight:700; min-width:86px; }
-  .btn.alt{ background:#ff6b6b; color:#fff; }
-  /* list */
-  .list{ background:var(--panel); border-radius:12px; padding:8px; max-height:28vh; overflow:auto; box-shadow:0 12px 40px rgba(0,0,0,0.6); }
-  .item{ display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; border-radius:10px; margin-bottom:8px; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005)); }
-  .meta{ display:flex; flex-direction:column; gap:4px; }
-  .hora{ color:var(--accent); font-weight:800; font-size:15px; }
-  .ponto{ color:#d7fff0; opacity:0.95; font-size:13px; }
-  .name{ color:#cfeee0; font-size:12px; }
-  .confirm{ background:#ff3b30; color:#fff; border:none; padding:8px 12px; border-radius:8px; font-weight:800; }
-  /* map */
-  #map{ flex:1; width:100%; border-radius:12px; box-shadow:0 18px 60px rgba(0,0,0,0.6); overflow:hidden; }
-  /* blinking */
-  @keyframes blinkGlow { 0%,100%{filter:drop-shadow(0 0 0px var(--accent)); transform:scale(1);} 50%{filter:drop-shadow(0 0 18px var(--accent)); transform:scale(1.02);} }
-  .leaflet-marker-icon.blink-alert{ animation:blinkGlow 1s linear infinite; z-index:1000!important; }
-  .leaflet-marker-icon.dimmed{ opacity:0.28; }
-  /* desktop overlay to force mobile usage */
-  #desktopOverlay{ display:none; position:fixed; inset:0; z-index:999999; background:linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.85)); align-items:center; justify-content:center; padding:20px; text-align:center; }
-  #desktopOverlay .card{ background:rgba(255,255,255,0.03); padding:18px; border-radius:12px; max-width:460px; color:#fff; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
-  @media(min-width:900px){ #desktopOverlay{ display:flex; } .app{ filter:blur(2px); } }
-  /* floating confirm button */
-  .float-confirm{ position:fixed; bottom:18px; left:50%; transform:translateX(-50%); z-index:99999; background:var(--accent); color:#000; padding:12px 18px; font-weight:800; border-radius:12px; display:none; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+  header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
+  .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
+  .title{color:var(--accent); font-weight:700; font-size:17px;}
+  /* main app */
+  .app{padding:70px 10px 12px; height:calc(100vh - 56px); box-sizing:border-box; display:flex; flex-direction:column; gap:8px;}
+  .controls{display:flex; gap:8px; align-items:center;}
+  .select{flex:1;height:46px;border-radius:10px;border:none;padding:0 12px;background:var(--muted); color:#fff;}
+  .btn{background:var(--accent); color:#000; border:none; padding:10px 12px; border-radius:10px; font-weight:800;}
+  .list{background:rgba(255,255,255,0.03); border-radius:12px; padding:8px; max-height:28vh; overflow:auto; box-shadow:0 14px 50px rgba(0,0,0,0.6);}
+  .item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
+  .meta{display:flex;flex-direction:column;}
+  .hour{color:var(--accent); font-weight:900;}
+  .point{color:#dff; font-size:13px;}
+  .name{color:#cfe; font-size:12px;}
+  #map{flex:1;border-radius:12px; overflow:hidden; box-shadow:0 18px 60px rgba(0,0,0,0.6);}
+  /* blinking marker class (we'll add to elements created by Maps API) */
+  @keyframes blinkGlow {0%,100%{filter:drop-shadow(0 0 0 var(--accent)); transform:scale(1);}50%{filter:drop-shadow(0 0 18px var(--accent)); transform:scale(1.02);}}
+  .blink-alert{animation:blinkGlow 1s linear infinite;}
+  .dimmed{opacity:0.25;}
+  /* float confirm button */
+  .float-confirm{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--accent);color:#000;padding:12px 18px;font-weight:900;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+  /* desktop overlay: encourage mobile */
+  #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.8); z-index:999999; align-items:center; justify-content:center;}
+  #desktopOverlay .card{background:rgba(255,255,255,0.02); padding:18px;border-radius:12px; color:#fff; max-width:420px; text-align:center;}
+  @media(min-width:900px){ #desktopOverlay{display:flex;} .app{filter:blur(3px);} }
 </style>
 </head>
 <body>
 
-<!-- header -->
-<div class="hdr">
+<header>
   <div class="logo" aria-hidden="true"></div>
   <div class="title">Coleta Transfer Inauguração</div>
-</div>
+</header>
 
-<!-- desktop overlay -->
+<!-- overlay para desktop (apenas visual) -->
 <div id="desktopOverlay" aria-hidden="true">
   <div class="card">
-    <h2 style="margin:0 0 8px;color:var(--accent)">Abra no celular</h2>
-    <p style="margin:0;color:#ddd">Este painel foi otimizado como um webapp de navegação para celular. Abra o link no navegador do seu celular para usar GPS, voz e navegação.</p>
-    <p style="margin-top:10px;color:#bbb;font-size:13px">Para testar no desktop, reduza a largura da janela ou comente a checagem.</p>
+    <h2 style="color:#00ffd5;margin:0 0 8px">Abra no celular</h2>
+    <p style="color:#ddd;margin:0">Este painel foi otimizado como webapp de navegação para celular. Abra no navegador do seu celular para usar GPS e voz.</p>
   </div>
 </div>
 
-<!-- app body -->
 <div class="app" id="app">
-  <div class="controls" role="region" aria-label="Controles">
-    <select id="hour-filter" class="select" aria-label="Filtrar por horário">
+  <div class="controls">
+    <select id="hour-filter" class="select" aria-label="Filtrar horário">
       <option value="">Mostrar todos (apenas reservas ≥ 19:00)</option>
     </select>
-    <button id="btnFilter" class="btn">Filtrar</button>
-    <button id="btnClear" class="btn alt">Limpar</button>
+    <button id="filterBtn" class="btn">Filtrar</button>
+    <button id="clearBtn" class="btn" style="background:#ff6b6b;color:#fff">Limpar</button>
   </div>
 
   <div class="list" id="list">
-    <!-- cards de passageiros -->
+    <!-- lista de agendamentos -->
   </div>
 
   <div id="map"></div>
@@ -88,439 +72,427 @@
 
 <button id="floatConfirm" class="float-confirm">✅ Confirmar Embarque</button>
 
-<!-- libs -->
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<!-- Google Maps JS API: coloque sua KEY no lugar de YOUR_GOOGLE_MAPS_API_KEY -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDFQXbs3FYVnV2yA9ZnTPnd-10O8v8RrUI&libraries=places&callback=initMap" async defer></script>
 
 <script>
-/* ================= CONFIG ================== */
+/* ================== CONFIG ================== */
+/* Google Sheets config (use your existing sheet/key) */
 const SHEET_ID = "132fh2lxEE2vzpfBmAbYCsk4UtRJAZ6fjdLEplUqbwFc";
-const API_KEY  = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
-const RANGE     = "A:E";
-const URL       = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU"; // sua chave do Sheets (já tinha)
+const RANGE = "A:E";
+const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
-let allData = [];          // rows loaded meeting date+>=19:00 and not already embarcado
-let filteredData = [];     // filtered by hour selection
-let embarcados = JSON.parse(localStorage.getItem('embarcados_v2') || '[]'); // persisted confirmed
-const markersByName = {};
-let map = null, routingControl = null, driverMarker = null, watchId = null;
-let prevPosition = null; // for heading estimation
+/* estado */
+let allData = [];      // bookings carregados (já filtrados por data>=19:00 e não embarcados)
+let filteredData = []; // filtro por horário
+let embarcados = JSON.parse(localStorage.getItem('embarcados_v3') || '[]'); // persistência
+let map, directionsService, directionsRenderer;
+let markers = {}; // markers por nome do ponto
+let driverMarker = null;
+let watchId = null;
+let currentRouteSteps = []; // steps from directions
+let nextStepIndex = 0;
 
-/* pontos (mesmo set) */
+/* pontos fixos */
 const pontos = [
-  {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
-  {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
-  {nome:"Ponto 28", coords:[-19.9986592,-43.9306448]},
-  {nome:"Ponto 29", coords:[-19.999421,-43.9326796]},
-  {nome:"Ponto 27", coords:[-20.0002531,-43.9314901]},
-  {nome:"Ponto 26", coords:[-20.0015469,-43.9333477]},
-  {nome:"Ponto 24", coords:[-20.003258,-43.9296246]},
-  {nome:"Ponto 25", coords:[-20.0050238,-43.9308419]},
-  {nome:"Ponto 21", coords:[-20.0027213,-43.9338594]},
-  {nome:"Ponto 22", coords:[-20.001474,-43.9355339]},
-  {nome:"Ponto 23", coords:[-20.0031588,-43.9364208]},
-  {nome:"Ponto 20", coords:[-20.0063663,-43.934352]},
-  {nome:"Ponto 19", coords:[-20.0085746,-43.9318072]},
-  {nome:"Ponto 17", coords:[-20.0104645,-43.9320381]},
-  {nome:"Ponto 18", coords:[-20.0088433,-43.9343321]},
-  {nome:"Ponto 12", coords:[-20.0088434,-43.9288248]},
-  {nome:"Ponto 13", coords:[-20.0094456,-43.9269802]},
-  {nome:"Ponto 14", coords:[-20.0075172,-43.9277972]},
-  {nome:"Ponto 16", coords:[-20.0068404,-43.9290337]},
-  {nome:"Ponto 15", coords:[-20.0079616,-43.9293497]},
-  {nome:"Ponto 09", coords:[-20.0110997,-43.9309597]},
-  {nome:"Ponto 10", coords:[-20.0120307,-43.9334509]},
-  {nome:"Ponto 11", coords:[-20.0098192,-43.9337648]},
-  {nome:"Ponto 08", coords:[-20.0102615,-43.9273848]},
-  {nome:"Ponto 05", coords:[-20.0114455,-43.9257426]},
-  {nome:"Ponto 06", coords:[-20.0112228,-43.9276231]},
-  {nome:"Ponto 07", coords:[-20.0108785,-43.9296971]},
-  {nome:"Ponto 04", coords:[-20.0068997,-43.9238609]},
-  {nome:"Ponto 03", coords:[-20.0047577,-43.9260624]},
-  {nome:"Ponto 02", coords:[-20.001753,-43.9270223]}
+  {nome:"PORTARIA", coords:{lat:-19.9978072,lng:-43.9266727}},
+  {nome:"Ponto 30", coords:{lat:-19.9977078,lng:-43.9289372}},
+  {nome:"Ponto 28", coords:{lat:-19.9986592,lng:-43.9306448}},
+  {nome:"Ponto 29", coords:{lat:-19.999421,lng:-43.9326796}},
+  {nome:"Ponto 27", coords:{lat:-20.0002531,lng:-43.9314901}},
+  {nome:"Ponto 26", coords:{lat:-20.0015469,lng:-43.9333477}},
+  {nome:"Ponto 24", coords:{lat:-20.003258,lng:-43.9296246}},
+  {nome:"Ponto 25", coords:{lat:-20.0050238,lng:-43.9308419}},
+  {nome:"Ponto 21", coords:{lat:-20.0027213,lng:-43.9338594}},
+  {nome:"Ponto 22", coords:{lat:-20.001474,lng:-43.9355339}},
+  {nome:"Ponto 23", coords:{lat:-20.0031588,lng:-43.9364208}},
+  {nome:"Ponto 20", coords:{lat:-20.0063663,lng:-43.934352}},
+  {nome:"Ponto 19", coords:{lat:-20.0085746,lng:-43.9318072}},
+  {nome:"Ponto 17", coords:{lat:-20.0104645,lng:-43.9320381}},
+  {nome:"Ponto 18", coords:{lat:-20.0088433,lng:-43.9343321}},
+  {nome:"Ponto 12", coords:{lat:-20.0088434,lng:-43.9288248}},
+  {nome:"Ponto 13", coords:{lat:-20.0094456,lng:-43.9269802}},
+  {nome:"Ponto 14", coords:{lat:-20.0075172,lng:-43.9277972}},
+  {nome:"Ponto 16", coords:{lat:-20.0068404,lng:-43.9290337}},
+  {nome:"Ponto 15", coords:{lat:-20.0079616,lng:-43.9293497}},
+  {nome:"Ponto 09", coords:{lat:-20.0110997,lng:-43.9309597}},
+  {nome:"Ponto 10", coords:{lat:-20.0120307,lng:-43.9334509}},
+  {nome:"Ponto 11", coords:{lat:-20.0098192,lng:-43.9337648}},
+  {nome:"Ponto 08", coords:{lat:-20.0102615,lng:-43.9273848}},
+  {nome:"Ponto 05", coords:{lat:-20.0114455,lng:-43.9257426}},
+  {nome:"Ponto 06", coords:{lat:-20.0112228,lng:-43.9276231}},
+  {nome:"Ponto 07", coords:{lat:-20.0108785,lng:-43.9296971}},
+  {nome:"Ponto 04", coords:{lat:-20.0068997,lng:-43.9238609}},
+  {nome:"Ponto 03", coords:{lat:-20.0047577,lng:-43.9260624}},
+  {nome:"Ponto 02", coords:{lat:-20.001753,lng:-43.9270223}}
 ];
 
-/* ================ UTILITÁRIOS ================ */
-function isMobile() {
-  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-function todayStringYYYYMMDD(){
+/* ============== util helpers ============== */
+function todayYMD(){
   const n = new Date();
   return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
 }
-function parseSheetDateTime(dt){
-  if(!dt) return null;
-  // Expecting "DD/MM/YYYY HH:MM" or similar (user's format)
-  if(dt.includes('/')){
-    const parts = dt.split(' ');
-    const d = parts[0].split('/');
-    const t = (parts[1]||'00:00').split(':');
-    const day = parseInt(d[0],10), month = parseInt(d[1],10)-1, year = parseInt(d[2],10);
-    const hour = parseInt(t[0]||0,10), min = parseInt(t[1]||0,10);
-    return new Date(year, month, day, hour, min);
+function parseSheetDateTime(val){
+  // espera DD/MM/YYYY HH:MM ou algo similar
+  if(!val) return null;
+  if(val.includes('/')){
+    const [dpart, tpart='00:00'] = val.split(' ');
+    const [d,m,y] = dpart.split('/');
+    const [hh,mm] = tpart.split(':');
+    const dt = new Date(Number(y), Number(m)-1, Number(d), Number(hh||0), Number(mm||0));
+    return isNaN(dt) ? null : dt;
   }
-  // fallback
-  const maybe = new Date(dt);
-  return isNaN(maybe) ? null : maybe;
+  // fallback ISO
+  const dt = new Date(val);
+  return isNaN(dt) ? null : dt;
 }
 function bookingKey(row){
-  // unique key: solicitante + ponto + original date string
   return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`;
 }
 function speak(text){
   if(!('speechSynthesis' in window)) return;
-  try{
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'pt-BR';
-    u.rate = 1.0;
-    window.speechSynthesis.cancel(); // avoid overlaps
-    window.speechSynthesis.speak(u);
-  }catch(e){ console.warn('speech err', e); }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'pt-BR';
+  u.rate = 1;
+  try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch(e){ console.warn('speech err', e); }
 }
-/* bearing between two latlngs */
-function bearing(lat1, lon1, lat2, lon2){
-  const toRad = Math.PI/180, toDeg = 180/Math.PI;
-  const y = Math.sin((lon2-lon1)*toRad)*Math.cos(lat2*toRad);
-  const x = Math.cos(lat1*toRad)*Math.sin(lat2*toRad) - Math.sin(lat1*toRad)*Math.cos(lat2*toRad)*Math.cos((lon2-lon1)*toRad);
-  const brng = (Math.atan2(y,x)*toDeg+360)%360;
-  return brng;
-}
-/* distance in meters */
 function haversine([lat1,lon1],[lat2,lon2]){
-  const R=6371000;
-  const toRad=Math.PI/180;
-  const dLat=(lat2-lat1)*toRad, dLon=(lon2-lon1)*toRad;
-  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-  return R*c;
+  const R=6371000, r=Math.PI/180;
+  const dLat=(lat2-lat1)*r, dLon=(lon2-lon1)*r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
 }
 
-/* ================ MAP & MARKERS ================ */
-function initMap(){
-  if(map) return;
-  map = L.map('map',{ zoomControl:false }).setView([-19.9978072,-43.9266727],15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'&copy; OpenStreetMap' }).addTo(map);
-  const icon = L.icon({ iconUrl:'Ponto.png', iconSize:[36,36], iconAnchor:[18,36] });
-  pontos.forEach(p=>{
-    const m = L.marker(p.coords, {icon}).addTo(map).bindPopup(p.nome);
-    markersByName[p.nome] = m;
-  });
-}
-
-/* set blink on specific pontos */
-function clearBlinkAll(){
-  Object.values(markersByName).forEach(m=>{
-    const el = m._icon || (m.getElement && m.getElement());
-    if(el){ el.classList.remove('blink-alert'); el.classList.remove('dimmed'); }
-    m.setZIndexOffset(0);
-  });
-}
-function setBlinkFor(names){
-  // dim all then highlight selected
-  Object.values(markersByName).forEach(m=>{
-    const el = m._icon || (m.getElement && m.getElement());
-    if(el){ el.classList.add('dimmed'); el.onclick = null; }
-  });
-  names.forEach(n=>{
-    const m = markersByName[n];
-    if(!m) return;
-    const el = m._icon || (m.getElement && m.getElement());
-    if(!el) return;
-    el.classList.remove('dimmed'); el.classList.add('blink-alert');
-    m.setZIndexOffset(1000);
-    // clicking on marker confirms the first matching booking for that ponto
-    el.onclick = ()=>{
-      const row = (filteredData.length ? filteredData : allData).find(r => r[2] === n);
-      if(row) confirmEmbarque(row);
-    };
-  });
-}
-
-/* ================ UI render ================ */
+/* ============== UI render ============== */
 const listEl = document.getElementById('list');
 const hourSelect = document.getElementById('hour-filter');
-function renderList(data){
+const filterBtn = document.getElementById('filterBtn');
+const clearBtn = document.getElementById('clearBtn');
+const floatConfirm = document.getElementById('floatConfirm');
+
+function renderList(rows){
   listEl.innerHTML = '';
-  if(!data.length){
-    listEl.innerHTML = '<div style="padding:12px;color:#cfe">Nenhum agendamento (apenas reservas a partir das 19:00 são carregadas).</div>';
+  if(!rows.length){
+    listEl.innerHTML = `<div style="padding:12px;color:#cfe">Nenhum agendamento (apenas reservas a partir das 19:00 são carregadas).</div>`;
     clearBlinkAll();
     return;
   }
-  data.forEach(row=>{
-    const dt = parseSheetDateTime(row[0]) || null;
-    const hora = dt ? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : (row[0]||'');
-    const solicit = row[1] || '';
-    const ponto = row[2] || '';
-    const key = bookingKey(row);
-    const item = document.createElement('div'); item.className = 'item';
-    item.innerHTML = `
-      <div class="meta">
-        <div class="hora">${hora}</div>
-        <div class="ponto">${ponto}</div>
-        <div class="name">${solicit}</div>
-      </div>
-      <div><button class="confirm" data-key="${encodeURIComponent(key)}">EMBARCAR</button></div>
-    `;
-    const btn = item.querySelector('button');
-    btn.addEventListener('click', ()=>{
-      confirmEmbarque(row);
+  rows.forEach(r=>{
+    const dt = parseSheetDateTime(r[0]);
+    const hh = dt ? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : (r[0]||'');
+    const solicit = r[1]||'';
+    const ponto = r[2]||'';
+    const key = bookingKey(r);
+    const div = document.createElement('div'); div.className='item';
+    div.innerHTML = `<div class="meta"><div class="hour">${hh}</div><div class="point">${ponto}</div><div class="name">${solicit}</div></div>
+                     <div><button class="btn-confirm" data-key="${encodeURIComponent(key)}" style="background:#ff3b30;color:#fff;padding:8px 10px;border-radius:8px;border:none;font-weight:800">EMBARCAR</button></div>`;
+    listEl.appendChild(div);
+    div.querySelector('.btn-confirm').addEventListener('click', ()=>{
+      confirmEmbarqueByKey(encodeURIComponent(key));
     });
-    listEl.appendChild(item);
   });
-  setBlinkFor(data.map(r=>r[2]));
+  setBlinkFor(rows.map(r=>r[2]));
 }
-
-/* populate hour list for filter (unique hh:mm) */
-function populateHourSelect(data){
+function populateHourOptions(rows){
   const s = new Set();
-  data.forEach(r=>{
+  rows.forEach(r=>{
     const dt = parseSheetDateTime(r[0]);
     if(dt) s.add(`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`);
   });
   const arr = Array.from(s).sort();
-  hourSelect.innerHTML = '<option value="">Mostrar todos (≥ 19:00)</option>';
-  arr.forEach(h=>{
-    const o = document.createElement('option'); o.value = h; o.textContent = h; hourSelect.appendChild(o);
+  hourSelect.innerHTML = '<option value="">Mostrar todos (≥19:00)</option>';
+  arr.forEach(a=>{
+    const opt = document.createElement('option'); opt.value=a; opt.textContent=a;
+    hourSelect.appendChild(opt);
   });
 }
 
-/* ================ FETCH bookings (today & >=19:00 & not embarcado) ================ */
-async function fetchBookings(){
+/* ============== MAP init ============== */
+/* initMap is called by Google Maps script callback */
+function initMap(){
+  // if on desktop, show overlay
+  const desktopOverlay = document.getElementById('desktopOverlay');
+  if(window.innerWidth >= 900){
+    desktopOverlay.style.display = 'flex';
+  } else {
+    desktopOverlay.style.display = 'none';
+  }
+
+  // create map centered on first point
+  const center = { lat: -19.9978072, lng: -43.9266727 };
+  map = new google.maps.Map(document.getElementById('map'), { center, zoom: 15, disableDefaultUI: true, tilt: 45, styles: [] });
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, preserveViewport: true });
+
+  // create markers for pontos
+  pontos.forEach(p=>{
+    const m = new google.maps.Marker({ position: p.coords, map, title: p.nome });
+    markers[p.nome] = m;
+  });
+
+  // load bookings after map ready
+  loadBookings();
+}
+
+/* blink helpers for google markers: we toggle an interval that changes their icon scale/anchor */
+const markerBlinkIntervals = {};
+function clearBlinkAll(){
+  Object.keys(markerBlinkIntervals).forEach(k=>{
+    clearInterval(markerBlinkIntervals[k]);
+    markerBlinkIntervals[k]=null;
+  });
+  Object.values(markers).forEach(m=>{
+    const el = m.getLabel && m.getLabel() || null;
+    if(m && m.setIcon) m.setIcon(null);
+    if(m && m.getElement) { const e = m.getElement(); if(e) e.classList.remove('blink-alert'); }
+  });
+}
+function setBlinkFor(names){
+  clearBlinkAll();
+  // dim others
+  Object.keys(markers).forEach(k=>{
+    if(!names.includes(k) && markers[k]){
+      // set opacity via marker label element if available
+      const m = markers[k];
+      if(m && m.getElement){
+        const el = m.getElement();
+        if(el) el.style.opacity = '0.28';
+      }
+    }
+  });
+  // blinking: add a CSS class to marker's DOM after small timeout
+  names.forEach(name=>{
+    const m = markers[name];
+    if(!m) return;
+    // try to add class to marker element; Google Maps marker DOM may not be immediately available, so poll
+    let tries = 0;
+    const id = setInterval(()=>{
+      const el = m.getElement ? m.getElement() : null;
+      if(el){
+        el.classList.add('blink-alert');
+        el.style.transition = 'transform 0.2s';
+        // click on marker -> confirm first booking for that ponto
+        el.style.cursor='pointer';
+        el.onclick = ()=>{
+          const row = (filteredData.length?filteredData:allData).find(r=>r[2]===name);
+          if(row) confirmEmbarque(row);
+        };
+        clearInterval(id);
+      }
+      if(++tries > 30) clearInterval(id);
+    }, 200);
+    markerBlinkIntervals[name] = id;
+  });
+}
+
+/* ============== LOAD bookings from Sheets ============== */
+async function loadBookings(){
   try{
-    const res = await fetch(URL);
+    const res = await fetch(SHEETS_URL);
     const json = await res.json();
     if(!json || !json.values || json.values.length <= 1){
-      allData = []; filteredData = []; renderList([]);
+      allData = []; filteredData = [];
+      renderList([]);
       return;
     }
     const rows = json.values.slice(1);
-    const today = todayStringYYYYMMDD();
-    const filtered = rows.filter(r=>{
-      const dt = parseSheetDateTime(r[0]);
-      if(!dt) return false;
-      const yyyy = dt.getFullYear(), mm = String(dt.getMonth()+1).padStart(2,'0'), dd = String(dt.getDate()).padStart(2,'0');
-      const ddStr = `${yyyy}-${mm}-${dd}`;
-      if(ddStr !== today) return false;
-      if(dt.getHours() < 19) return false; // only >=19:00
-      // exclude those already embarcados (persisted)
-      const key = bookingKey(r);
-      if(embarcados.includes(key)) return false;
-      return true;
-    });
-    allData = filtered;
-    filteredData = allData.slice();
-    initMap();
-    renderList(filteredData);
-    populateHourSelect(allData);
-  }catch(e){
-    console.error(e);
-    alert('Erro ao carregar agendamentos.');
-  }
-}
-
-/* ================ FILTERS, ROUTE and GEO ================ */
-function applyFilter(){
-  const v = hourSelect.value;
-  if(!v) filteredData = allData.slice();
-  else filteredData = allData.filter(r=>{
-    const dt = parseSheetDateTime(r[0]);
-    if(!dt) return false;
-    const hhmm = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-    return hhmm === v;
-  });
-  renderList(filteredData);
-  if(filteredData.length){
-    document.getElementById('map').style.display = 'block';
-    startTrackingAndRoute();
-  } else {
-    clearBlinkAll();
-    if(routingControl){ map.removeControl(routingControl); routingControl = null; }
-  }
-}
-
-/* Start watchPosition and setup routing to agendados */
-function startTrackingAndRoute(){
-  const nomes = filteredData.map(r=>r[2]);
-  const agendados = pontos.filter(p=>nomes.includes(p.nome));
-  if(!agendados.length) return;
-  // ensure map and markers
-  initMap();
-  // fit bounds
-  const group = L.featureGroup(agendados.map(p=>markersByName[p.nome]));
-  map.fitBounds(group.getBounds().pad(0.2));
-  // start geolocation
-  if(navigator.geolocation){
-    if(watchId === null){
-      watchId = navigator.geolocation.watchPosition(pos=>{
-        const lat = pos.coords.latitude, lon = pos.coords.longitude;
-        // update driver marker
-        if(!driverMarker){
-          const busIcon = L.icon({ iconUrl:'Onibus.png', iconSize:[40,40], iconAnchor:[20,20] });
-          driverMarker = L.marker([lat,lon],{icon:busIcon}).addTo(map).bindPopup('Você está aqui');
-        } else {
-          driverMarker.setLatLng([lat,lon]);
-        }
-        // compute heading
-        let heading = null;
-        if(typeof pos.coords.heading === 'number' && !isNaN(pos.coords.heading)) heading = pos.coords.heading;
-        else if(prevPosition){
-          const prev = prevPosition;
-          heading = bearing(prev.lat, prev.lon, lat, lon);
-        }
-        prevPosition = { lat, lon, t:Date.now() };
-        // compute next waypoint (first in agendados list)
-        if(agendados.length){
-          const next = agendados[0];
-          const dist = haversine([lat,lon], next.coords);
-          // announce if close
-          if(dist < 80){ // within 80m
-            speak(`Próximo destino: ${next.nome}. Prepare-se para embarcar.`);
-          } else {
-            // announce basic direction once when route set or if big heading change
-            const brngToNext = bearing(lat, lon, next.coords[0], next.coords[1]);
-            if(heading !== null){
-              const diff = ((brngToNext - heading + 540)%360)-180; // -180..180
-              if(Math.abs(diff) > 30){
-                const turn = diff > 0 ? 'vire à direita' : 'vire à esquerda';
-                speak(turn);
-              } else {
-                speak('siga em frente');
-              }
-            } else {
-              // no heading info
-              speak(`Siga em direção ao ${next.nome}`);
-            }
-          }
-        }
-        // update route control
-        updateRoutingControl([lat,lon], agendados);
-      }, err=>{
-        console.warn('Geo error', err);
-      }, { enableHighAccuracy:true, maximumAge:2000, timeout:10000 });
-    }
-  } else {
-    // just fit bounds
-    if(agendados.length){
-      const group = L.featureGroup(agendados.map(p=>markersByName[p.nome]));
-      map.fitBounds(group.getBounds().pad(0.3));
-    }
-  }
-}
-
-/* update routing control */
-function updateRoutingControl(userLatLng, agendados){
-  if(routingControl){ map.removeControl(routingControl); routingControl = null; }
-  const waypoints = [L.latLng(userLatLng[0], userLatLng[1])].concat(agendados.map(a=>L.latLng(a.coords[0], a.coords[1])));
-  routingControl = L.Routing.control({
-    waypoints,
-    routeWhileDragging:false,
-    draggableWaypoints:false,
-    addWaypoints:false,
-    createMarker: ()=> null,
-    show:false,
-    collapsible:true
-  }).addTo(map);
-  // hide the UI of the router if present
-  const rc = document.querySelector('.leaflet-routing-container');
-  if(rc) rc.style.display = 'none';
-  // announce route created
-  if(agendados.length){
-    speak(`Rota atualizada. Próximo destino: ${agendados[0].nome}`);
-  }
-}
-
-/* ================ CONFIRMAR EMBARQUE ================ */
-/* Accepts the booking row object */
-function confirmEmbarque(row){
-  const key = bookingKey(row);
-  if(!embarcados.includes(key)) embarcados.push(key);
-  localStorage.setItem('embarcados_v2', JSON.stringify(embarcados));
-  // remove booking from arrays
-  allData = allData.filter(r => bookingKey(r) !== key);
-  filteredData = filteredData.filter(r => bookingKey(r) !== key);
-  // stop blink for that point and optionally remove marker
-  const ponto = row[2];
-  const marker = markersByName[ponto];
-  if(marker){
-    const el = marker._icon || (marker.getElement && marker.getElement());
-    if(el){ el.classList.remove('blink-alert'); el.classList.remove('dimmed'); }
-    // optionally remove marker: map.removeLayer(marker);
-    // delete markersByName[ponto];
-  }
-  // re-render
-  renderList(filteredData.length ? filteredData : allData);
-  // recompute route
-  const nomes = (filteredData.length ? filteredData : allData).map(r => r[2]);
-  const agendados = pontos.filter(p => nomes.includes(p.nome));
-  if(agendados.length && driverMarker){
-    const pos = driverMarker.getLatLng();
-    updateRoutingControl([pos.lat,pos.lng], agendados);
-  } else if(routingControl){
-    map.removeControl(routingControl); routingControl=null;
-  }
-  speak('Embarque confirmado.');
-}
-
-/* wrapper for list buttons (encoded key) */
-function confirmEmbarqueByKey(encoded){
-  const key = decodeURIComponent(encoded);
-  const row = (filteredData.concat(allData)).find(r => bookingKey(r) === key);
-  if(row) confirmEmbarque(row);
-}
-
-/* ================ BIND UI ================ */
-document.getElementById('btnFilter').addEventListener('click', applyFilter);
-document.getElementById('btnClear').addEventListener('click', ()=>{
-  hourSelect.value=''; filteredData = allData.slice(); renderList(filteredData); clearBlinkAll();
-  if(routingControl){ map.removeControl(routingControl); routingControl = null; }
-});
-
-/* ================ INIT ================ */
-(function init(){
-  // mobile guard
-  if(!isMobile()){
-    document.getElementById('desktopOverlay').style.display = 'flex';
-    return;
-  } else {
-    document.getElementById('desktopOverlay').style.display = 'none';
-    // ensure map container visible
-    document.getElementById('map').style.display = 'block';
-  }
-  // fetch bookings and init map
-  fetchBookings();
-})();
-
-/*  Load bookings */
-async function fetchBookings(){
-  try{
-    const res = await fetch(URL);
-    const json = await res.json();
-    if(!json || !json.values || json.values.length<=1){ allData = []; filteredData=[]; renderList([]); return; }
-    const rows = json.values.slice(1);
-    const today = todayStringYYYYMMDD();
+    const today = todayYMD();
+    // keep only bookings for today AND time >= 19:00 AND not already embarcado
     const kept = rows.filter(r=>{
       const dt = parseSheetDateTime(r[0]);
       if(!dt) return false;
       const yyyy = dt.getFullYear(), mm = String(dt.getMonth()+1).padStart(2,'0'), dd = String(dt.getDate()).padStart(2,'0');
-      const rowDate = `${yyyy}-${mm}-${dd}`;
-      if(rowDate !== today) return false;
-      if(dt.getHours() < 19) return false; // only >= 19:00
+      const rowYMD = `${yyyy}-${mm}-${dd}`;
+      if(rowYMD !== today) return false;
+      if(dt.getHours() < 19) return false;
       const key = bookingKey(r);
       if(embarcados.includes(key)) return false;
       return true;
     });
     allData = kept;
     filteredData = allData.slice();
-    initMap();
+    // render and populate filters
     renderList(filteredData);
-    populateHourSelect(allData);
-    // speak about loaded count
-    if(allData.length) speak(`${allData.length} agendamentos carregados. Filtre por horário para ver rota.`);
+    populateHourOptions(allData);
+    // announce
+    if(allData.length) speak(`${allData.length} agendamento(s) carregado(s).`);
     else speak('Nenhum agendamento a partir das 19 horas encontrado hoje.');
   }catch(e){
-    console.error(e); alert('Erro ao buscar planilha.');
+    console.error(e);
+    alert('Erro ao buscar dados da planilha.');
   }
 }
+
+/* ============== FILTERS ============== */
+filterBtn.addEventListener('click', ()=>{
+  const v = hourSelect.value;
+  if(!v) filteredData = allData.slice();
+  else filteredData = allData.filter(r=>{
+    const dt = parseSheetDateTime(r[0]);
+    if(!dt) return false;
+    const hh = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    return hh === v;
+  });
+  renderList(filteredData);
+  if(filteredData.length){
+    // start navigation to first agendado
+    startNavigation();
+  } else {
+    clearBlinkAll();
+    if(directionsRenderer) directionsRenderer.setMap(null);
+  }
+});
+clearBtn.addEventListener('click', ()=>{
+  hourSelect.value=''; filteredData = allData.slice(); renderList(filteredData); clearBlinkAll();
+});
+
+/* ============== NAVIGATION & VOICE ============== */
+function startNavigation(){
+  if(!filteredData.length) return;
+  // ensure map is ready
+  if(!map) return;
+  // compute agendados points in order (as they appear)
+  const nomes = filteredData.map(r=>r[2]);
+  const agendados = pontos.filter(p=>nomes.includes(p.nome));
+  // set blink
+  setBlinkFor(nomes);
+  // start tracking
+  if(navigator.geolocation){
+    if(watchId===null){
+      watchId = navigator.geolocation.watchPosition(onPositionUpdate, (e)=>{ console.warn('geo err',e); }, { enableHighAccuracy:true, maximumAge:2000, timeout:10000 });
+    }
+  } else {
+    alert('Geolocalização não disponível.');
+  }
+  // center map to include driver + agendados
+  const bounds = new google.maps.LatLngBounds();
+  agendados.forEach(a=> bounds.extend(a.coords));
+  map.fitBounds(bounds);
+}
+
+/* handle position updates */
+function onPositionUpdate(pos){
+  const lat = pos.coords.latitude, lng = pos.coords.longitude;
+  const userLatLng = { lat, lng };
+  // add/update driver marker
+  if(!driverMarker){
+    driverMarker = new google.maps.Marker({ position: userLatLng, map, title:'Você', icon:{ path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale:6, strokeColor:'#00ffd5', fillColor:'#00ffd5', fillOpacity:1 } });
+  } else {
+    driverMarker.setPosition(userLatLng);
+  }
+
+  // if no filteredData, nothing to route
+  if(!filteredData.length) return;
+
+  // build agendados list
+  const nomes = filteredData.map(r=>r[2]);
+  const ag = pontos.filter(p=>nomes.includes(p.nome));
+  if(!ag.length) return;
+
+  // steer route: origin = current pos, destination = first agendado
+  const dest = ag[0].coords;
+  const request = {
+    origin: userLatLng,
+    destination: dest,
+    travelMode: google.maps.TravelMode.DRIVING,
+    drivingOptions: { departureTime: new Date() }
+  };
+  directionsService.route(request, (result, status)=>{
+    if(status === 'OK' && result.routes && result.routes.length){
+      directionsRenderer.setDirections(result);
+      // extract steps for voice guidance
+      const steps = [];
+      const legs = result.routes[0].legs;
+      legs.forEach(leg=>{
+        leg.steps.forEach(s=>{
+          steps.push({ instruction: s.instructions.replace(/<[^>]+>/g,''), end_location: { lat: s.end_location.lat(), lng: s.end_location.lng() } });
+        });
+      });
+      currentRouteSteps = steps;
+      nextStepIndex = 0;
+      // speak first step
+      if(steps.length) speak(steps[0].instruction);
+      // monitor distances to next step to announce
+      monitorSteps(userLatLng);
+    }
+  });
+}
+
+/* Monitor steps distances and speak next instructions when closer */
+function monitorSteps(userLatLng){
+  // check distance to nextStepIndex end_location and speak when within threshold
+  const check = ()=> {
+    if(!currentRouteSteps || nextStepIndex >= currentRouteSteps.length) return;
+    const next = currentRouteSteps[nextStepIndex];
+    const dist = haversine([userLatLng.lat,userLatLng.lng],[next.end_location.lat,next.end_location.lng]);
+    // speak when within 70-120 meters depending on step
+    if(dist < 110){
+      speak(next.instruction);
+      nextStepIndex++;
+    }
+  };
+  // call immediately and then set interval for short duration
+  check();
+  const mon = setInterval(()=>{
+    if(!driverMarker) { clearInterval(mon); return; }
+    const pos = driverMarker.getPosition ? driverMarker.getPosition() : null;
+    if(!pos){ clearInterval(mon); return; }
+    const u = { lat: pos.lat(), lng: pos.lng() };
+    monitorSteps = monitorSteps; // no-op to avoid lint
+    if(nextStepIndex >= currentRouteSteps.length){ clearInterval(mon); return; }
+    const next = currentRouteSteps[nextStepIndex];
+    const dist = haversine([u.lat,u.lng],[next.end_location.lat,next.end_location.lng]);
+    if(dist < 110){
+      speak(next.instruction);
+      nextStepIndex++;
+    }
+  }, 3000);
+}
+
+/* ============== CONFIRMAR EMBARQUE ============== */
+/* confirm by booking row */
+function confirmEmbarque(row){
+  const key = bookingKey(row);
+  if(!embarcados.includes(key)) embarcados.push(key);
+  localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
+  // remove from arrays
+  allData = allData.filter(r => bookingKey(r) !== key);
+  filteredData = filteredData.filter(r => bookingKey(r) !== key);
+  // stop blinking for the ponto and optionally remove marker highlight
+  const ponto = row[2];
+  if(markers[ponto]){
+    const el = markers[ponto].getElement ? markers[ponto].getElement() : null;
+    if(el){ el.classList.remove('blink-alert'); el.style.opacity='1'; }
+  }
+  renderList(filteredData.length ? filteredData : allData);
+  // recompute route if needed
+  if(filteredData.length) startNavigation();
+  else {
+    if(directionsRenderer) directionsRenderer.setMap(null);
+    if(watchId !== null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
+  }
+  speak('Embarque confirmado.');
+}
+function confirmEmbarqueByKey(encoded){
+  const key = decodeURIComponent(encoded);
+  const row = (filteredData.concat(allData)).find(r => bookingKey(r) === key);
+  if(row) confirmEmbarque(row);
+}
+
+/* ============== helper to trigger initial load ============== */
+window.initMap = initMap;
+
+/* Small safety: if Maps not loaded (no API key), show alert */
+setTimeout(()=>{
+  if(typeof google === 'undefined' || !google.maps){
+    alert('Google Maps API não carregou. Insira sua API KEY no script src (substitua YOUR_GOOGLE_MAPS_API_KEY).');
+  } else {
+    // if maps loaded and map not initialized yet, init will be called by callback
+  }
+}, 1500);
 </script>
 </body>
 </html>
+
+
