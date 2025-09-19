@@ -68,6 +68,8 @@ let allData=[], filteredData=[], embarcados=JSON.parse(localStorage.getItem('emb
 let map, driverMarker, routeLayer, currentDest;
 const menu=document.getElementById('menu');
 const menuToggle=document.getElementById('menuToggle');
+let ultimaAtualizacao = Date.now();
+
 const pontos = [
   {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
   {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
@@ -124,10 +126,7 @@ function speak(text){console.log('NAV:',text);}
 /* ================== UI ================== */
 function renderMenu(rows){
   menu.innerHTML='';
-  if(!rows.length){
-    menu.innerHTML='<div style="padding:12px;color:#cfe">Nenhum agendamento disponível.</div>';
-    return;
-  }
+  if(!rows.length){ menu.innerHTML='<div style="padding:12px;color:#cfe">Nenhum agendamento disponível.</div>'; return; }
   rows.forEach(r=>{
     const dt=parseSheetDateTime(r[0]);
     const hh=dt?`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`:'';
@@ -190,17 +189,14 @@ async function getRouteOSRM(start, end){
 }
 
 let watchId;
-
 function startNavigationTo(row){
   currentDest=pontos.find(p=>p.nome===row[2]);
   if(!currentDest){ alert('Destino inválido'); return; }
-
   if(watchId) navigator.geolocation.clearWatch(watchId);
 
   watchId=navigator.geolocation.watchPosition(async pos=>{
     const latlng=[pos.coords.latitude,pos.coords.longitude];
-    if(driverMarker){ driverMarker.setLatLng(latlng); }
-    else{ driverMarker=L.marker(latlng,{icon:carIcon}).addTo(map); }
+    if(driverMarker){ driverMarker.setLatLng(latlng); } else{ driverMarker=L.marker(latlng,{icon:carIcon}).addTo(map); }
     map.setView(latlng,17);
 
     if(currentDest){
@@ -209,8 +205,6 @@ function startNavigationTo(row){
         routeLayer.clearLayers();
         L.polyline(routeCoords,{color:'#00ffd5',weight:5}).addTo(routeLayer);
       }
-
-      // proximidade
       const dx=latlng[0]-currentDest.coords[0];
       const dy=latlng[1]-currentDest.coords[1];
       const dist=Math.sqrt(dx*dx+dy*dy)*111000;
@@ -234,6 +228,43 @@ function confirmEmbarque(row){
   currentDest=null;
   speak('Embarque confirmado');
 }
+
+/* ================== NOVAS MARCAÇÕES ================== */
+if('Notification' in window && Notification.permission!=='granted'){ Notification.requestPermission(); }
+
+function novaMarcacaoAviso(texto){
+  const audio=new Audio('https://freesound.org/data/previews/522/522638_4141150-lq.mp3');
+  audio.play();
+  if('Notification' in window && Notification.permission==='granted'){
+    new Notification('Nova marcação disponível',{body:texto, icon:'https://cdn-icons-png.flaticon.com/512/61/61168.png'});
+  }
+}
+
+setInterval(async ()=>{
+  try{
+    const res=await fetch(SHEETS_URL);
+    const json=await res.json();
+    if(!json || !json.values || json.values.length<=1) return;
+    const rows=json.values.slice(1);
+    const today=todayYMD();
+    const novas=rows.filter(r=>{
+      const dt=parseSheetDateTime(r[0]);
+      if(!dt) return false;
+      const yyyy=dt.getFullYear(), mm=String(dt.getMonth()+1).padStart(2,'0'), dd=String(dt.getDate()).padStart(2,'0');
+      const rowYMD=`${yyyy}-${mm}-${dd}`;
+      if(rowYMD!==today) return false;
+      if(dt.getHours()<19) return false;
+      const key=bookingKey(r);
+      if(embarcados.includes(key)) return false;
+      return dt.getTime()>ultimaAtualizacao;
+    });
+    if(novas.length>0){
+      novas.forEach(n=>novaMarcacaoAviso(`Agendamento: ${n[1]} - ${n[2]} às ${parseSheetDateTime(n[0]).getHours()}:${parseSheetDateTime(n[0]).getMinutes()}`));
+      loadBookings();
+      ultimaAtualizacao=Date.now();
+    }
+  }catch(e){ console.error(e); }
+},15000);
 </script>
 </body>
 </html>
