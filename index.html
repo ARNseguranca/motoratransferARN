@@ -82,8 +82,8 @@ const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/va
 let allData = [], filteredData = [], embarcados = JSON.parse(localStorage.getItem('embarcados_v3') || '[]');
 let map, driverMarker, routeLayer, currentDest = null;
 let watchId = null;
-let ultimaAtualizacao = 0; // timestamp ms da última linha conhecida
-const POLL_INTERVAL_MS = 15000; // 15s
+let ultimaAtualizacao = 0; 
+const POLL_INTERVAL_MS = 15000;
 
 const menu = document.getElementById('menu');
 const menuToggle = document.getElementById('menuToggle');
@@ -126,7 +126,6 @@ const pontos = [
 
 /* ================== UTIL ================== */
 function todayYMD(){ const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
-
 function parseSheetDateTime(val){
   if(!val) return null;
   if(val.includes('/')){
@@ -139,10 +138,7 @@ function parseSheetDateTime(val){
   const dt = new Date(val);
   return isNaN(dt) ? null : dt;
 }
-
-function bookingKey(row){
-  return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`;
-}
+function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
 
 /* WebAudio beep */
 const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
@@ -210,61 +206,104 @@ function renderMenu(rows){
     div.querySelector('.btn-go').addEventListener('click', ()=> startNavigationTo(r));
   });
 }
-
-/* menu toggle */
-menuToggle.addEventListener('click', ()=>{
-  menu.classList.toggle('open');
-  if('Notification' in window && Notification.permission === 'default'){
-    Notification.requestPermission().catch(()=>{});
-  }
-});
+menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } });
 
 /* ================== MAP INIT ================== */
 map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 routeLayer = L.layerGroup().addTo(map);
+const carIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/61/61168.png', iconSize: [44,44], iconAnchor: [22,22] });
+function rotateMarkerIcon(marker, angleDegrees){ if(!marker||!marker._icon) return; marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`; marker._icon.style.transition = 'transform 0.2s linear'; }
 
-/* driver icon = seta */
-const arrowIcon = L.divIcon({
-  html: `<svg viewBox="0 0 24 24" width="40" height="40" style="fill:${getComputedStyle(document.documentElement).getPropertyValue('--accent')}"><path d="M12 2 L3 21 L12 17 L21 21 Z"></path></svg>`,
-  className: 'driver-arrow-icon',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20]
-});
-
-function rotateMarkerIcon(marker, angleDegrees){
-  if(!marker || !marker._icon) return;
-  marker._icon.style.transform = `rotate(${angleDegrees}deg)`;
-  marker._icon.style.transition = 'transform 0.2s linear';
-}
-
-/* ================== NOTIFICAÇÃO REFORÇADA ================== */
+/* ================== NOTIFICAR NOVAS MARCAÇÕES ================== */
 async function notifyNewBooking(message){
   playBeep();
-  speak(message);
-
   if('Notification' in window && Notification.permission === 'granted'){
     try {
       const n = new Notification('Nova marcação', { body: message, icon: 'https://cdn-icons-png.flaticon.com/512/61/61168.png' });
-      n.onclick = ()=> { window.focus(); menu.classList.add('open'); };
+      n.onclick = ()=>{ window.focus(); menu.classList.add('open'); };
     } catch(e){ console.warn('notify err', e); }
+  } else {
+    statusBubble.textContent = message;
+    setTimeout(()=>{ statusBubble.textContent='Aguardando'; }, 5000);
   }
-
-  statusBubble.textContent = message;
-  statusBubble.style.background = 'rgba(255,0,0,0.8)';
-  statusBubble.style.color = '#fff';
-  statusBubble.style.fontSize = '15px';
-  setTimeout(()=> { 
-    statusBubble.textContent = 'Aguardando'; 
-    statusBubble.style.background = 'rgba(0,0,0,0.6)';
-    statusBubble.style.color = '#cfe';
-    statusBubble.style.fontSize = '13px';
-  }, 6000);
 }
 
-/* ================== RESTANTE DO SEU CÓDIGO ================== */
-/* Mantive todas as funções loadBookings, startNavigationTo, confirmEmbarque, getRouteOSRM etc. exatamente como você tinha. */
+/* ================== CARREGAR MARCAÇÕES ================== */
+async function loadBookings(initial=false){
+  try {
+    const res = await fetch(SHEETS_URL);
+    const json = await res.json();
+    if(!json||!json.values||json.values.length<=1){ allData=[]; filteredData=[]; renderMenu(filteredData); return; }
+    const rows = json.values.slice(1);
+    const today = todayYMD();
+    let maxTimestamp = ultimaAtualizacao;
+
+    const kept = rows.filter(r=>{
+      const dt=parseSheetDateTime(r[0]);
+      if(!dt) return false;
+      const rowYMD = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      if(rowYMD!==today) return false;
+      if(dt.getHours()<19) return false;
+      const key = bookingKey(r);
+      if(embarcados.includes(key)) return false;
+      if(dt.getTime()>maxTimestamp) maxTimestamp=dt.getTime();
+      return true;
+    });
+
+    // detectar novas entradas
+    if(!initial && ultimaAtualizacao>0){
+      const novas = kept.filter(r=>{ const dt=parseSheetDateTime(r[0]); return dt && dt.getTime()>ultimaAtualizacao; });
+      novas.forEach(n=>{
+        const solicitante=n[1]||'';
+        const ponto=n[2]||'';
+        notifyNewBooking(`Novo agendamento: ${solicitante} - ${ponto}`);
+      });
+    }
+
+    allData = kept;
+    filteredData = allData.slice();
+    renderMenu(filteredData);
+    ultimaAtualizacao = maxTimestamp>0? maxTimestamp : (initial? Date.now():ultimaAtualizacao);
+
+  } catch(e){ console.error('Erro ao buscar planilha', e); }
+}
+
+loadBookings(true);
+setInterval(()=>loadBookings(false), POLL_INTERVAL_MS);
+
+/* ================== NAVIGATION ================== */
+function startNavigationTo(row){
+  const coords = pontos.find(p=>p.nome===row[2])?.coords;
+  if(!coords){ alert('Ponto inválido'); return; }
+  currentDest = coords;
+  if(!driverMarker){
+    driverMarker = L.marker([0,0],{icon:carIcon}).addTo(map);
+  }
+  map.flyTo(coords,17);
+  speak(`Rota para ${row[2]}`);
+  menu.classList.remove('open');
+}
+
+/* ================== GEO ================== */
+function updateDriverPosition(pos){
+  const {latitude, longitude} = pos.coords;
+  if(driverMarker) driverMarker.setLatLng([latitude, longitude]);
+  if(currentDest){
+    const brng = bearingBetween([latitude, longitude], currentDest);
+    rotateMarkerIcon(driverMarker, brng);
+    const dist = (L.latLng(latitude, longitude).distanceTo(L.latLng(currentDest[0], currentDest[1]))||0);
+    statusBubble.textContent = `Distância: ${Math.round(dist)}m`;
+  }
+}
+
+if(navigator.geolocation){
+  watchId = navigator.geolocation.watchPosition(updateDriverPosition, e=>console.warn(e), { enableHighAccuracy:true, maximumAge:500, timeout:10000 });
+}
 
 </script>
+
 </body>
 </html>
+
+
