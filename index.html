@@ -37,12 +37,12 @@
   #arrow svg{width:42px;height:42px; fill:var(--accent);}
   #statusBubble{position:fixed;right:12px;bottom:24px;z-index:100000;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:10px;color:#cfe;font-weight:700;font-size:13px;}
   .hint{font-size:12px;color:#9df;margin-top:6px;}
-  /* popup alerta novas marcações */
   #newAlert{
     position:fixed; top:80px; right:12px; background:#ff3b30; color:#fff; padding:12px 16px; border-radius:12px; font-weight:700; z-index:100001; display:none;
   }
   #newAlert button{margin-left:12px;background:#000;color:#fff;border:none;padding:4px 8px;border-radius:6px; cursor:pointer;}
 </style>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
 </head>
@@ -132,7 +132,11 @@ const pontos = [
 ];
 
 /* ================== UTIL ================== */
-function todayYMD(){ const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
+function todayYMD(){ 
+  const n = new Date(); 
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; 
+}
+
 function parseSheetDateTime(val){
   if(!val) return null;
   if(val.includes('/')){
@@ -145,7 +149,10 @@ function parseSheetDateTime(val){
   const dt = new Date(val);
   return isNaN(dt) ? null : dt;
 }
-function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
+
+function bookingKey(row){ 
+  return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; 
+}
 
 /* ================== UI MENU ================== */
 function renderMenu(rows){
@@ -169,22 +176,35 @@ function renderMenu(rows){
     div.querySelector('.btn-go').addEventListener('click', ()=> startNavigationTo(r));
   });
 }
-menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } });
+
+menuToggle.addEventListener('click', ()=>{
+  menu.classList.toggle('open'); 
+  if('Notification' in window && Notification.permission==='default'){ 
+    Notification.requestPermission().catch(()=>{}); 
+  } 
+});
 
 /* ================== MAP INIT ================== */
 map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 
+/* Ícone seta (motorista) */
 const arrowIcon = L.icon({
   iconUrl: "https://cdn-icons-png.flaticon.com/512/60/60577.png",
   iconSize: [44,44],
   iconAnchor: [22,22]
 });
-function rotateMarkerIcon(marker, angleDegrees){ if(!marker||!marker._icon) return; marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`; marker._icon.style.transition = 'transform 0.2s linear'; }
+
+function rotateMarkerIcon(marker, angleDegrees){ 
+  if(!marker||!marker._icon) return; 
+  marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`; 
+  marker._icon.style.transition = 'transform 0.2s linear'; 
+}
 
 /* ================== ALERTA SONORO ================== */
 let beepInterval = null;
 const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+
 function playBeepOnce(){
   if(!audioCtx) return;
   const o = audioCtx.createOscillator();
@@ -199,11 +219,13 @@ function playBeepOnce(){
   g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
   setTimeout(()=>{ o.stop(); }, 500);
 }
+
 function startAlertBeep(){
-  if(beepInterval) return;
-  playBeepOnce();
-  beepInterval = setInterval(playBeepOnce, 1000);
+  if(beepInterval) return; 
+  playBeepOnce(); 
+  beepInterval = setInterval(playBeepOnce, 1000); 
 }
+
 function stopAlertBeep(){
   if(beepInterval){
     clearInterval(beepInterval);
@@ -211,18 +233,19 @@ function stopAlertBeep(){
   }
 }
 
-/* ================== ALERTA ================== */
+/* ================== ALERTA NOVA SOLICITAÇÃO ================== */
 function showAlert(message){
   alertText.textContent = message;
   newAlert.style.display = 'block';
-  startAlertBeep();
-}
-function closeAlert(){
-  newAlert.style.display='none';
-  stopAlertBeep();
+  startAlertBeep(); 
 }
 
-/* ================== NOVO AGENDAMENTO ================== */
+function closeAlert(){
+  newAlert.style.display='none';
+  stopAlertBeep(); 
+}
+
+/* ================== NOTIFICAR NOVAS MARCAÇÕES ================== */
 async function notifyNewBooking(message){
   showAlert(message);
   if(driverMarker){
@@ -277,17 +300,16 @@ loadBookings(true);
 setInterval(loadBookings, POLL_INTERVAL_MS);
 
 /* ================== NAVEGAÇÃO ================== */
-function bearingBetween([lat1,lon1],[lat2,lon2]){
-  const y = Math.sin((lon2-lon1)*Math.PI/180)*Math.cos(lat2*Math.PI/180);
-  const x = Math.cos(lat1*Math.PI/180)*Math.sin(lat2*Math.PI/180) - Math.sin(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.cos((lon2-lon1)*Math.PI/180);
-  return (Math.atan2(y,x)*180/Math.PI + 360)%360;
-}
 function startNavigationTo(row){
   currentDest = pontos.find(p=>p.nome.toLowerCase() === (row[2]||'').trim().toLowerCase());
   if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
+  if(driverMarker) map.panTo(driverMarker.getLatLng());
+  else map.panTo(currentDest.coords);
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
   menu.classList.remove('open');
+
   if(routeControl) map.removeControl(routeControl);
+
   if(driverMarker){
     routeControl = L.Routing.control({
       waypoints: [
@@ -301,8 +323,6 @@ function startNavigationTo(row){
       createMarker: function() { return null; },
       router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' })
     }).addTo(map);
-  } else {
-    map.panTo(currentDest.coords);
   }
 }
 
@@ -327,7 +347,7 @@ if('geolocation' in navigator){
   watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {enableHighAccuracy:true, maximumAge:1000});
 } else { statusBubble.textContent='Sem suporte a GPS'; }
 
-/* ================== CONFIRMAR ================== */
+/* ============== EMBARCAR / CONFIRMAR ============== */
 map.on('popupopen', e=>{
   const node = e.popup._contentNode;
   if(node && node.querySelector('.btn-confirm')){
@@ -336,6 +356,7 @@ map.on('popupopen', e=>{
       embarcados.push(decodeURIComponent(rowKey));
       localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
       loadBookings(true);
+      map.closePopup();
       currentDest = null;
       if(routeControl) map.removeControl(routeControl);
       statusBubble.textContent='Aguardando';
@@ -347,4 +368,3 @@ map.on('popupopen', e=>{
 
 </body>
 </html>
-
