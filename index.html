@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"/>
@@ -11,37 +11,28 @@
     --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.08);
   }
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb;}
-  /* header */
   header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
   .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
   .title{color:var(--accent); font-weight:700; font-size:17px;}
-  /* main app */
-  .app{padding:70px 10px 12px; height:calc(100vh - 56px); box-sizing:border-box; display:flex; flex-direction:column; gap:8px;}
-  .controls{display:flex; gap:8px; align-items:center;}
-  .select{flex:1;height:46px;border-radius:10px;border:none;padding:0 12px;background:var(--muted); color:#fff;}
-  .btn{background:var(--accent); color:#000; border:none; padding:10px 12px; border-radius:10px; font-weight:800;}
-  .list{background:rgba(255,255,255,0.03); border-radius:12px; padding:8px; max-height:28vh; overflow:auto; box-shadow:0 14px 50px rgba(0,0,0,0.6);}
+  .app{padding:70px 10px 12px; height:calc(100vh - 56px); box-sizing:border-box; display:flex; flex-direction:row; gap:8px;}
+  .list{width:280px; background:rgba(255,255,255,0.03); border-radius:12px; padding:8px; max-height:calc(100vh - 70px); overflow:auto; box-shadow:0 14px 50px rgba(0,0,0,0.6);}
   .item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
   .meta{display:flex;flex-direction:column;}
   .hour{color:var(--accent); font-weight:900;}
   .point{color:#dff; font-size:13px;}
   .name{color:#cfe; font-size:12px;}
   #map{flex:1;border-radius:12px; overflow:hidden; box-shadow:0 18px 60px rgba(0,0,0,0.6);}
-  /* blinking marker class */
-  @keyframes blinkGlow {0%,100%{opacity:1;}50%{opacity:0.3;}}
-  .blink-alert{animation:blinkGlow 1s linear infinite;}
-  .dimmed{opacity:0.25;}
-  /* float confirm button */
-  .float-confirm{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--accent);color:#000;padding:12px 18px;font-weight:900;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
-  /* desktop overlay */
+  .btn{background:var(--accent); color:#000; border:none; padding:6px 10px; border-radius:10px; font-weight:800; cursor:pointer;}
+  .btn-go{background:#00bfff;color:#000;}
+  .btn-confirm{background:#ff3b30;color:#fff;}
+  .float-confirm{display:none;}
   #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.8); z-index:999999; align-items:center; justify-content:center;}
   #desktopOverlay .card{background:rgba(255,255,255,0.02); padding:18px;border-radius:12px; color:#fff; max-width:420px; text-align:center;}
   @media(min-width:900px){ #desktopOverlay{display:flex;} .app{filter:blur(3px);} }
 </style>
 
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 </head>
 <body>
 
@@ -58,35 +49,26 @@
 </div>
 
 <div class="app" id="app">
-  <div class="controls">
-    <select id="hour-filter" class="select" aria-label="Filtrar horário">
-      <option value="">Mostrar todos (apenas reservas ≥ 19:00)</option>
-    </select>
-    <button id="filterBtn" class="btn">Filtrar</button>
-    <button id="clearBtn" class="btn" style="background:#ff6b6b;color:#fff">Limpar</button>
-  </div>
-
   <div class="list" id="list"></div>
   <div id="map"></div>
 </div>
 
-<button id="floatConfirm" class="float-confirm">✅ Confirmar Embarque</button>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 /* ================== CONFIG ================== */
 const SHEET_ID = "132fh2lxEE2vzpfBmAbYCsk4UtRJAZ6fjdLEplUqbwFc";
-const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU"; 
+const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
 const RANGE = "A:E";
 const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
 let allData = [];
 let filteredData = [];
 let embarcados = JSON.parse(localStorage.getItem('embarcados_v3') || '[]');
-let map, driverMarker, routeLine;
-let markers = {};
 
-/* pontos fixos */
-const pontos = [
+let map, driverMarker, routeLayer;
+let pontos = [
   {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
   {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
   {nome:"Ponto 28", coords:[-19.9986592,-43.9306448]},
@@ -119,127 +101,127 @@ const pontos = [
   {nome:"Ponto 02", coords:[-20.001753,-43.9270223]}
 ];
 
-/* util helpers */
-function todayYMD(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
-function parseSheetDateTime(val){ if(!val) return null; if(val.includes('/')){ const [dpart, tpart='00:00']=val.split(' '); const [d,m,y]=dpart.split('/'); const [hh,mm]=tpart.split(':'); const dt=new Date(Number(y),Number(m)-1,Number(d),Number(hh||0),Number(mm||0)); return isNaN(dt)?null:dt;} const dt=new Date(val); return isNaN(dt)?null:dt;}
-function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
+/* ================== UTIL ================== */
+function todayYMD(){
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function parseSheetDateTime(val){
+  if(!val) return null;
+  if(val.includes('/')){
+    const [dpart,tpart='00:00'] = val.split(' ');
+    const [d,m,y] = dpart.split('/');
+    const [hh,mm] = tpart.split(':');
+    const dt = new Date(Number(y), Number(m)-1, Number(d), Number(hh||0), Number(mm||0));
+    return isNaN(dt)?null:dt;
+  }
+  const dt = new Date(val);
+  return isNaN(dt)?null:dt;
+}
+function bookingKey(row){
+  return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`;
+}
+function speak(text){ console.log('NAV:', text); }
 
-/* ============== UI render ============== */
+/* ================== UI ================== */
 const listEl = document.getElementById('list');
-const hourSelect = document.getElementById('hour-filter');
-const filterBtn = document.getElementById('filterBtn');
-const clearBtn = document.getElementById('clearBtn');
-const floatConfirm = document.getElementById('floatConfirm');
 
 function renderList(rows){
   listEl.innerHTML='';
-  if(!rows.length){ listEl.innerHTML='<div style="padding:12px;color:#cfe">Nenhum agendamento (apenas reservas a partir das 19:00 são carregadas).</div>'; return;}
+  if(!rows.length){ listEl.innerHTML='<div style="padding:12px;color:#cfe">Nenhum agendamento disponível.</div>'; return; }
   rows.forEach(r=>{
     const dt=parseSheetDateTime(r[0]);
-    const hh=dt?`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`:(r[0]||'');
-    const solicit=r[1]||'';
-    const ponto=r[2]||'';
-    const key=bookingKey(r);
+    const hh=dt?`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`:'';
     const div=document.createElement('div'); div.className='item';
-    div.innerHTML=`<div class="meta"><div class="hour">${hh}</div><div class="point">${ponto}</div><div class="name">${solicit}</div></div>
-    <div><button class="btn-confirm" data-key="${encodeURIComponent(key)}" style="background:#ff3b30;color:#fff;padding:8px 10px;border-radius:8px;border:none;font-weight:800">EMBARCAR</button></div>`;
+    div.innerHTML=`<div class="meta"><div class="hour">${hh}</div><div class="point">${r[2]||''}</div><div class="name">${r[1]||''}</div></div>
+      <div>
+        <button class="btn btn-go" data-key="${encodeURIComponent(bookingKey(r))}">Ir</button>
+      </div>`;
     listEl.appendChild(div);
-    div.querySelector('.btn-confirm').addEventListener('click',()=>{ confirmEmbarqueByKey(encodeURIComponent(key)); });
+    div.querySelector('.btn-go').addEventListener('click', ()=>startNavigationTo(r));
   });
 }
 
-function populateHourOptions(rows){
-  const s=new Set();
-  rows.forEach(r=>{ const dt=parseSheetDateTime(r[0]); if(dt) s.add(`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`); });
-  const arr=Array.from(s).sort();
-  hourSelect.innerHTML='<option value="">Mostrar todos (≥19:00)</option>';
-  arr.forEach(a=>{ const opt=document.createElement('option'); opt.value=a; opt.textContent=a; hourSelect.appendChild(opt); });
-}
+/* ================== MAP ================== */
+map = L.map('map',{zoomControl:false}).setView([-19.9978072,-43.9266727],15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+routeLayer = L.layerGroup().addTo(map);
 
-/* ============== MAP init ============== */
-function initMap(){
-  if(window.innerWidth>=900) document.getElementById('desktopOverlay').style.display='flex';
-  else document.getElementById('desktopOverlay').style.display='none';
-  map=L.map('map',{zoomControl:true}).setView([-19.9978072,-43.9266727],15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
-  pontos.forEach(p=>{
-    const m=L.marker(p.coords).addTo(map).bindPopup(p.nome);
-    markers[p.nome]=m;
-  });
-  loadBookings();
-}
+/* Driver Marker: carro rotacionável */
+const carIcon = L.icon({
+  iconUrl:'https://cdn-icons-png.flaticon.com/512/61/61168.png',
+  iconSize:[40,40],
+  iconAnchor:[20,20]
+});
 
-/* ============== LOAD bookings ============== */
+/* ================== LOAD BOOKINGS ================== */
 async function loadBookings(){
   try{
-    const res=await fetch(SHEETS_URL);
-    const json=await res.json();
-    if(!json||!json.values||json.values.length<=1){ allData=[]; filteredData=[]; renderList([]); return;}
+    const res = await fetch(SHEETS_URL);
+    const json = await res.json();
+    if(!json || !json.values || json.values.length<=1){ allData=[]; filteredData=[]; renderList([]); return; }
     const rows=json.values.slice(1);
     const today=todayYMD();
     const kept=rows.filter(r=>{
       const dt=parseSheetDateTime(r[0]);
       if(!dt) return false;
       const yyyy=dt.getFullYear(), mm=String(dt.getMonth()+1).padStart(2,'0'), dd=String(dt.getDate()).padStart(2,'0');
-      if(`${yyyy}-${mm}-${dd}`!==today) return false;
+      const rowYMD=`${yyyy}-${mm}-${dd}`;
+      if(rowYMD!==today) return false;
       if(dt.getHours()<19) return false;
-      if(embarcados.includes(bookingKey(r))) return false;
+      const key=bookingKey(r);
+      if(embarcados.includes(key)) return false;
       return true;
     });
     allData=kept; filteredData=allData.slice();
-    renderList(filteredData); populateHourOptions(allData);
-  }catch(e){ console.error(e); alert('Erro ao buscar dados da planilha.'); }
+    renderList(filteredData);
+  }catch(e){ console.error(e); alert('Erro ao buscar dados da planilha'); }
 }
+loadBookings();
 
-/* ============== FILTERS ============== */
-filterBtn.addEventListener('click',()=>{
-  const v=hourSelect.value;
-  if(!v) filteredData=allData.slice();
-  else filteredData=allData.filter(r=>{ const dt=parseSheetDateTime(r[0]); if(!dt) return false; const hh=`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`; return hh===v; });
-  renderList(filteredData);
-  if(filteredData.length) startNavigation();
-});
-
-clearBtn.addEventListener('click',()=>{
-  hourSelect.value=''; filteredData=allData.slice(); renderList(filteredData);
-});
-
-/* ============== NAVIGATION ============== */
-function startNavigation(){
-  if(!filteredData.length) return;
-  if(!navigator.geolocation){ alert('Geolocalização não disponível'); return; }
+/* ================== NAVIGATION ================== */
+function startNavigationTo(row){
+  if(!navigator.geolocation){ alert('Geolocalização não disponível.'); return; }
   navigator.geolocation.getCurrentPosition(pos=>{
     const latlng=[pos.coords.latitude,pos.coords.longitude];
-    if(!driverMarker){ driverMarker=L.marker(latlng,{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/61/61168.png',iconSize:[36,36]})}).addTo(map).bindPopup('Você'); }
-    else driverMarker.setLatLng(latlng);
+    if(driverMarker){ driverMarker.setLatLng(latlng); } 
+    else { driverMarker=L.marker(latlng,{icon:carIcon}).addTo(map); }
     map.setView(latlng,17);
-    drawRoute(latlng, filteredData[0][2]);
-  }, err=>{ console.warn('geo err',err); });
+
+    // Rota simples: linha reta até ponto
+    routeLayer.clearLayers();
+    const destino = pontos.find(p=>p.nome===row[2]);
+    if(!destino) return;
+    const latlngs=[latlng,destino.coords];
+    L.polyline(latlngs,{color:'#00ffd5',weight:5,dashArray:'5,10'}).addTo(routeLayer);
+
+    // Muda botão para confirmar embarque quando próximo
+    const interval = setInterval(()=>{
+      const dx = latlng[0]-destino.coords[0];
+      const dy = latlng[1]-destino.coords[1];
+      const dist=Math.sqrt(dx*dx+dy*dy)*111000; // aprox meters
+      if(dist<50){
+        clearInterval(interval);
+        const btn=document.querySelector(`button[data-key="${encodeURIComponent(bookingKey(row))}"]`);
+        btn.textContent='Confirmar Embarque';
+        btn.className='btn btn-confirm';
+        btn.onclick=()=>confirmEmbarque(row);
+      }
+    },2000);
+  }, e=>{ console.warn(e); alert('Erro ao obter localização'); }, {enableHighAccuracy:true});
 }
 
-async function drawRoute(origin, destinoNome){
-  const destino = pontos.find(p=>p.nome===destinoNome);
-  if(!destino) return;
-  const url = `https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${destino.coords[1]},${destino.coords[0]}?overview=full&geometries=geojson`;
-  const res = await fetch(url); const data = await res.json();
-  if(!data.routes || !data.routes.length) return;
-  if(routeLine) map.removeLayer(routeLine);
-  routeLine=L.geoJSON(data.routes[0].geometry,{color:'#00ffd5',weight:6,opacity:0.7}).addTo(map);
-}
-
-/* ============== EMBARQUE ============== */
-function confirmEmbarqueByKey(encoded){
-  const key=decodeURIComponent(encoded);
-  const row=(filteredData.concat(allData)).find(r=>bookingKey(r)===key);
-  if(!row) return;
+/* ================== CONFIRMAR EMBARQUE ================== */
+function confirmEmbarque(row){
+  const key=bookingKey(row);
   if(!embarcados.includes(key)) embarcados.push(key);
-  localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
-  allData=allData.filter(r=>bookingKey(r)!==key);
+  localStorage.setItem('embarcados_v3',JSON.stringify(embarcados));
   filteredData=filteredData.filter(r=>bookingKey(r)!==key);
-  renderList(filteredData.length?filteredData:allData);
+  allData=allData.filter(r=>bookingKey(r)!==key);
+  renderList(filteredData);
+  routeLayer.clearLayers();
+  speak('Embarque confirmado');
 }
-
-window.onload = initMap;
 </script>
 </body>
 </html>
