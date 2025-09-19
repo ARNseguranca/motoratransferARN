@@ -11,9 +11,11 @@
     --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.08);
   }
   html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb;}
+  /* header */
   header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
   .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
   .title{color:var(--accent); font-weight:700; font-size:17px;}
+  /* main app */
   .app{padding:70px 10px 12px; height:calc(100vh - 56px); box-sizing:border-box; display:flex; flex-direction:column; gap:8px;}
   .controls{display:flex; gap:8px; align-items:center;}
   .select{flex:1;height:46px;border-radius:10px;border:none;padding:0 12px;background:var(--muted); color:#fff;}
@@ -25,18 +27,20 @@
   .point{color:#dff; font-size:13px;}
   .name{color:#cfe; font-size:12px;}
   #map{flex:1;border-radius:12px; overflow:hidden; box-shadow:0 18px 60px rgba(0,0,0,0.6);}
+  /* blinking marker class (we'll add to elements created by Maps API) */
   @keyframes blinkGlow {0%,100%{filter:drop-shadow(0 0 0 var(--accent)); transform:scale(1);}50%{filter:drop-shadow(0 0 18px var(--accent)); transform:scale(1.02);}}
   .blink-alert{animation:blinkGlow 1s linear infinite;}
   .dimmed{opacity:0.25;}
+  /* float confirm button */
   .float-confirm{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--accent);color:#000;padding:12px 18px;font-weight:900;border-radius:12px;display:none;box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+  /* desktop overlay: encourage mobile */
   #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.8); z-index:999999; align-items:center; justify-content:center;}
   #desktopOverlay .card{background:rgba(255,255,255,0.02); padding:18px;border-radius:12px; color:#fff; max-width:420px; text-align:center;}
   @media(min-width:900px){ #desktopOverlay{display:flex;} .app{filter:blur(3px);} }
 </style>
 
-<!-- Mapbox -->
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.21.0/mapbox-gl.css" rel="stylesheet" />
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.21.0/mapbox-gl.js"></script>
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 
@@ -67,17 +71,23 @@
 
 <button id="floatConfirm" class="float-confirm">✅ Confirmar Embarque</button>
 
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <script>
 /* ================== CONFIG ================== */
-const MAPBOX_TOKEN = 'YOUR_MAPBOX_ACCESS_TOKEN'; // Substitua pela sua chave
 const SHEET_ID = "132fh2lxEE2vzpfBmAbYCsk4UtRJAZ6fjdLEplUqbwFc";
 const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
 const RANGE = "A:E";
 const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
-/* estado */
-let allData=[], filteredData=[], embarcados=JSON.parse(localStorage.getItem('embarcados_v3')||'[]');
-let mapboxMap=null, markers={}, driverMarker=null, routeLine=null, currentRouteSteps=[], nextStepIndex=0, watchId=null;
+let allData = [];
+let filteredData = [];
+let embarcados = JSON.parse(localStorage.getItem('embarcados_v3') || '[]');
+let map, driverMarker;
+let markers = {};
+let currentRouteSteps = [];
+let nextStepIndex = 0;
 
 /* pontos fixos */
 const pontos = [
@@ -113,163 +123,173 @@ const pontos = [
   {nome:"Ponto 02", coords:{lat:-20.001753,lng:-43.9270223}}
 ];
 
-/* ================== util ================== */
-function todayYMD(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
-function parseSheetDateTime(val){ if(!val) return null; if(val.includes('/')){ const [dpart,tpart='00:00']=val.split(' '); const [d,m,y]=dpart.split('/'); const [hh,mm]=tpart.split(':'); const dt=new Date(Number(y),Number(m)-1,Number(d),Number(hh||0),Number(mm||0)); return isNaN(dt)?null:dt; } const dt=new Date(val); return isNaN(dt)?null:dt; }
-function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
-function speak(text){ if(!('speechSynthesis' in window)) return; const u=new SpeechSynthesisUtterance(text); u.lang='pt-BR'; u.rate=1; try{window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);}catch(e){console.warn(e);} }
-function haversine([lat1,lon1],[lat2,lon2]){ const R=6371000,r=Math.PI/180,dLat=(lat2-lat1)*r,dLon=(lon2-lon1)*r,a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(a)); }
+/* ================= UTIL ================= */
+function todayYMD(){
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+}
+function parseSheetDateTime(val){
+  if(!val) return null;
+  if(val.includes('/')){
+    const [dpart, tpart='00:00'] = val.split(' ');
+    const [d,m,y] = dpart.split('/');
+    const [hh,mm] = tpart.split(':');
+    const dt = new Date(Number(y), Number(m)-1, Number(d), Number(hh||0), Number(mm||0));
+    return isNaN(dt) ? null : dt;
+  }
+  const dt = new Date(val);
+  return isNaN(dt) ? null : dt;
+}
+function bookingKey(row){
+  return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`;
+}
+function speak(text){
+  if(!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'pt-BR'; u.rate=1;
+  try { window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); } catch(e){}
+}
+function haversine([lat1,lon1],[lat2,lon2]){
+  const R=6371000,r=Math.PI/180;
+  const dLat=(lat2-lat1)*r, dLon=(lon2-lon1)*r;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*r)*Math.cos(lat2*r)*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
 
 /* ================== UI ================== */
-const listEl=document.getElementById('list');
-const hourSelect=document.getElementById('hour-filter');
-const filterBtn=document.getElementById('filterBtn');
-const clearBtn=document.getElementById('clearBtn');
-const floatConfirm=document.getElementById('floatConfirm');
+const listEl = document.getElementById('list');
+const hourSelect = document.getElementById('hour-filter');
+const filterBtn = document.getElementById('filterBtn');
+const clearBtn = document.getElementById('clearBtn');
 
 function renderList(rows){
   listEl.innerHTML='';
-  if(!rows.length){ listEl.innerHTML=`<div style="padding:12px;color:#cfe">Nenhum agendamento (apenas reservas a partir das 19:00 são carregadas).</div>`; clearBlinkAll(); return; }
+  if(!rows.length){
+    listEl.innerHTML=`<div style="padding:12px;color:#cfe">Nenhum agendamento (apenas reservas a partir das 19:00 são carregadas).</div>`;
+    clearBlinkAll();
+    return;
+  }
   rows.forEach(r=>{
     const dt=parseSheetDateTime(r[0]);
-    const hh=dt?`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`:(r[0]||'');
-    const solicit=r[1]||'';
-    const ponto=r[2]||'';
-    const key=bookingKey(r);
-    const div=document.createElement('div'); div.className='item';
+    const hh = dt ? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : (r[0]||'');
+    const solicit = r[1]||'';
+    const ponto = r[2]||'';
+    const key = bookingKey(r);
+    const div = document.createElement('div'); div.className='item';
     div.innerHTML=`<div class="meta"><div class="hour">${hh}</div><div class="point">${ponto}</div><div class="name">${solicit}</div></div>
                    <div><button class="btn-confirm" data-key="${encodeURIComponent(key)}" style="background:#ff3b30;color:#fff;padding:8px 10px;border-radius:8px;border:none;font-weight:800">EMBARCAR</button></div>`;
     listEl.appendChild(div);
-    div.querySelector('.btn-confirm').addEventListener('click', ()=>{ confirmEmbarqueByKey(encodeURIComponent(key)); });
+    div.querySelector('.btn-confirm').addEventListener('click',()=>confirmEmbarqueByKey(encodeURIComponent(key)));
   });
   setBlinkFor(rows.map(r=>r[2]));
 }
 function populateHourOptions(rows){
-  const s=new Set();
-  rows.forEach(r=>{ const dt=parseSheetDateTime(r[0]); if(dt) s.add(`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`); });
+  const s = new Set();
+  rows.forEach(r=>{
+    const dt=parseSheetDateTime(r[0]);
+    if(dt) s.add(`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`);
+  });
   const arr=Array.from(s).sort();
   hourSelect.innerHTML='<option value="">Mostrar todos (≥19:00)</option>';
-  arr.forEach(a=>{ const opt=document.createElement('option'); opt.value=a; opt.textContent=a; hourSelect.appendChild(opt); });
+  arr.forEach(a=>{const opt=document.createElement('option'); opt.value=a; opt.textContent=a; hourSelect.appendChild(opt);});
 }
 
-/* ================== Mapbox init ================== */
+/* ================== MAP ================== */
 function initMap(){
   const desktopOverlay=document.getElementById('desktopOverlay');
-  desktopOverlay.style.display = window.innerWidth>=900?'flex':'none';
+  if(window.innerWidth>=900) desktopOverlay.style.display='flex'; else desktopOverlay.style.display='none';
 
-  mapboxMap=new mapboxgl.Map({
-    container:'map',
-    style:'mapbox://styles/mapbox/streets-v12',
-    center:[-43.9266727,-19.9978072],
-    zoom:15
-  });
-
-  mapboxMap.addControl(new mapboxgl.NavigationControl({showCompass:true,showZoom:true}));
+  map=L.map('map').setView([-19.9978072,-43.9266727],15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 
   pontos.forEach(p=>{
-    const el=document.createElement('div');
-    el.className='blink-alert';
-    el.style.width='16px'; el.style.height='16px';
-    el.style.background='#00ffd5'; el.style.borderRadius='50%'; el.style.boxShadow='0 0 8px #00ffd5';
-    el.title=p.nome;
-    const marker=new mapboxgl.Marker(el).setLngLat([p.coords.lng,p.coords.lat]).addTo(mapboxMap);
-    markers[p.nome]=marker;
+    const m=L.marker([p.coords.lat,p.coords.lng]).addTo(map).bindPopup(p.nome);
+    markers[p.nome]=m;
   });
 
   loadBookings();
 }
+window.onload=initMap;
 
-/* ================== Load bookings ================== */
+/* blink helpers */
+function clearBlinkAll(){
+  Object.values(markers).forEach(m=>{
+    if(m._icon) m._icon.classList.remove('blink-alert');
+  });
+}
+function setBlinkFor(names){
+  clearBlinkAll();
+  Object.keys(markers).forEach(k=>{
+    if(!names.includes(k) && markers[k] && markers[k]._icon) markers[k]._icon.style.opacity=0.28;
+  });
+  names.forEach(n=>{
+    const m=markers[n];
+    if(!m || !m._icon) return;
+    m._icon.classList.add('blink-alert');
+    m._icon.style.cursor='pointer';
+    m._icon.onclick=()=>{ const row=filteredData.find(r=>r[2]===n)||allData.find(r=>r[2]===n); if(row) confirmEmbarque(row); };
+  });
+}
+
+/* ================== LOAD SHEETS ================== */
 async function loadBookings(){
   try{
-    const res=await fetch(SHEETS_URL);
-    const json=await res.json();
-    if(!json||!json.values||json.values.length<=1){ allData=[]; filteredData=[]; renderList([]); return; }
+    const res = await fetch(SHEETS_URL);
+    const json = await res.json();
+    if(!json.values || json.values.length<=1){ allData=[]; filteredData=[]; renderList([]); return; }
     const rows=json.values.slice(1);
     const today=todayYMD();
-    const kept=rows.filter(r=>{
+    const kept = rows.filter(r=>{
       const dt=parseSheetDateTime(r[0]);
       if(!dt) return false;
-      const yyyy=dt.getFullYear(), mm=String(dt.getMonth()+1).padStart(2,'0'), dd=String(dt.getDate()).padStart(2,'0');
-      if(`${yyyy}-${mm}-${dd}`!==today) return false;
+      const rowYMD=`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      if(rowYMD!==today) return false;
       if(dt.getHours()<19) return false;
       if(embarcados.includes(bookingKey(r))) return false;
       return true;
     });
     allData=kept; filteredData=allData.slice();
-    renderList(filteredData); populateHourOptions(allData);
-    speak(allData.length?`${allData.length} agendamento(s) carregado(s).`:'Nenhum agendamento a partir das 19 horas encontrado hoje.');
+    renderList(filteredData);
+    populateHourOptions(allData);
+    if(allData.length) speak(`${allData.length} agendamento(s) carregado(s).`);
+    else speak('Nenhum agendamento a partir das 19 horas encontrado hoje.');
   }catch(e){ console.error(e); alert('Erro ao buscar dados da planilha.'); }
 }
 
-/* ================== Filters ================== */
+/* ================== FILTERS ================== */
 filterBtn.addEventListener('click',()=>{
   const v=hourSelect.value;
-  filteredData=!v?allData.slice():allData.filter(r=>{ const dt=parseSheetDateTime(r[0]); if(!dt) return false; const hh=`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`; return hh===v; });
+  filteredData=!v ? allData.slice() : allData.filter(r=>{
+    const dt=parseSheetDateTime(r[0]);
+    if(!dt) return false;
+    const hh=`${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+    return hh===v;
+  });
   renderList(filteredData);
-  if(filteredData.length) startNavigation(); else clearBlinkAll();
 });
-clearBtn.addEventListener('click',()=>{ hourSelect.value=''; filteredData=allData.slice(); renderList(filteredData); clearBlinkAll(); });
+clearBtn.addEventListener('click'=>{hourSelect.value=''; filteredData=allData.slice(); renderList(filteredData); clearBlinkAll();});
 
-/* ================== Blink ================== */
-const markerBlinkIntervals={};
-function clearBlinkAll(){ Object.keys(markerBlinkIntervals).forEach(k=>{ clearInterval(markerBlinkIntervals[k]); markerBlinkIntervals[k]=null; }); }
-function setBlinkFor(names){ clearBlinkAll(); Object.keys(markers).forEach(k=>{ if(!names.includes(k)&&markers[k]) markers[k].getElement().style.opacity='0.28'; }); names.forEach(name=>{ const m=markers[name]; if(!m) return; const el=m.getElement(); if(el){ el.classList.add('blink-alert'); el.style.cursor='pointer'; el.onclick=()=>{ const row=(filteredData.length?filteredData:allData).find(r=>r[2]===name); if(row) confirmEmbarque(row); } } }); }
-
-/* ================== Navigation ================== */
-async function startNavigation(){
-  if(!filteredData.length||!mapboxMap) return;
-  const nomes=filteredData.map(r=>r[2]);
-  const agendados=pontos.filter(p=>nomes.includes(p.nome));
-  if(!agendados.length) return;
-
-  if(navigator.geolocation){
-    if(watchId===null){ watchId=navigator.geolocation.watchPosition(onPositionUpdate,e=>console.warn(e),{enableHighAccuracy:true}); }
-  }else{ alert('Geolocalização não disponível.'); }
-
-  const bounds=new mapboxgl.LngLatBounds();
-  agendados.forEach(a=>bounds.extend([a.coords.lng,a.coords.lat]));
-  mapboxMap.fitBounds(bounds,{padding:50});
+/* ================== EMBARQUE ================== */
+function confirmEmbarque(row){
+  const key=bookingKey(row);
+  if(embarcados.includes(key)) return;
+  embarcados.push(key);
+  localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
+  speak(`${row[1]} embarcado no ${row[2]}`);
+  loadBookings();
 }
-async function onPositionUpdate(pos){
-  const lat=pos.coords.latitude, lng=pos.coords.longitude;
-  const userLatLng=[lng,lat];
-
-  if(!driverMarker){
-    const el=document.createElement('div');
-    el.style.width='24px'; el.style.height='24px';
-    el.style.background='#00ffd5'; el.style.borderRadius='50%'; el.style.boxShadow='0 0 12px #00ffd5';
-    driverMarker=new mapboxgl.Marker(el).setLngLat(userLatLng).addTo(mapboxMap);
-  }else driverMarker.setLngLat(userLatLng);
-
-  if(!filteredData.length) return;
-  const firstPoint=pontos.find(p=>p.nome===filteredData[0][2]);
-  if(!firstPoint) return;
-
-  const url=`https://api.mapbox.com/directions/v5/mapbox/driving/${lng},${lat};${firstPoint.coords.lng},${firstPoint.coords.lat}?geometries=geojson&steps=true&access_token=${MAPBOX_TOKEN}`;
-  const res=await fetch(url); const data=await res.json();
-  if(!data.routes||!data.routes.length) return;
-  const route=data.routes[0].geometry;
-
-  if(mapboxMap.getSource('route')){ mapboxMap.removeLayer('route'); mapboxMap.removeSource('route'); }
-  mapboxMap.addSource('route',{type:'geojson',data:{type:'Feature',geometry:route}});
-  mapboxMap.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#00ffd5','line-width':5}});
-
-  currentRouteSteps=[]; data.routes[0].legs[0].steps.forEach(s=>currentRouteSteps.push({instruction:s.maneuver.instruction,location:s.maneuver.location})); nextStepIndex=0;
-  if(currentRouteSteps.length) speak(currentRouteSteps[0].instruction);
-}
-
-/* ================== Confirm embarque ================== */
-function confirmEmbarque(row){ const key=bookingKey(row); confirmEmbarqueByKey(encodeURIComponent(key)); }
 function confirmEmbarqueByKey(key){
-  embarcados.push(decodeURIComponent(key)); localStorage.setItem('embarcados_v3',JSON.stringify(embarcados));
-  filteredData=filteredData.filter(r=>bookingKey(r)!==decodeURIComponent(key));
-  allData=allData.filter(r=>bookingKey(r)!==decodeURIComponent(key));
-  renderList(filteredData); speak('Embarque confirmado');
+  key=decodeURIComponent(key);
+  const row=allData.find(r=>bookingKey(r)===key);
+  if(row) confirmEmbarque(row);
 }
 
-/* ================== Start ================== */
-window.onload=initMap;
+/* ================== FLOAT CONFIRM ================== */
+const floatConfirm=document.getElementById('floatConfirm');
+floatConfirm.addEventListener('click',()=>{
+  speak('Embarque confirmado');
+  floatConfirm.style.display='none';
+});
 </script>
 
 </body>
