@@ -253,7 +253,7 @@ async function notifyNewBooking(message){
   }
   if('Notification' in window && Notification.permission === 'granted'){
     try {
-      const n = new Notification('Nova marcação', { body: message, icon: 'https://cdn-icons-png.flaticon.com/512/60/60577.png' });
+      const n = new Notification('Nova marcação', { body: message, icon: 'carro.png' });
       n.onclick = ()=>{ window.focus(); menu.classList.add('open'); };
     } catch(e){ console.warn('notify err', e); }
   }
@@ -368,3 +368,4 @@ map.on('popupopen', e=>{
 
 </body>
 </html>
+
