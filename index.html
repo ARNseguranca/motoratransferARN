@@ -208,64 +208,134 @@ function renderMenu(rows){
 }
 menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } });
 
-/* ================== INICIALIZA MAPA ================== */
-map = L.map('map', {zoomControl:false, attributionControl:false}).setView(pontos[0].coords, 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  minZoom: 13,
-  attribution: ''
-}).addTo(map);
-
-const carIcon = L.icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/743/743007.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 20]
-});
-
-driverMarker = null;
+/* ================== MAP INIT ================== */
+map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 routeLayer = L.layerGroup().addTo(map);
-currentDest = null;
 
-// Atualiza posição do motorista e seta a rota
-function updateDriverPosition(pos){
-  const {latitude, longitude} = pos.coords;
-  if(!driverMarker){
-    driverMarker = L.marker([latitude, longitude], {icon: carIcon}).addTo(map);
-  } else {
-    driverMarker.setLatLng([latitude, longitude]);
-  }
+/* Ícone seta (motorista) */
+const arrowIcon = L.icon({
+  iconUrl: "https://cdn-icons-png.flaticon.com/512/60/60577.png",
+  iconSize: [44,44],
+  iconAnchor: [22,22]
+});
+function rotateMarkerIcon(marker, angleDegrees){ if(!marker||!marker._icon) return; marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`; marker._icon.style.transition = 'transform 0.2s linear'; }
 
-  // Atualiza rota
-  routeLayer.clearLayers();
-  if(currentDest){
-    const polyline = L.polyline([[latitude, longitude], currentDest], {color: '#00ffd5', weight: 4, dashArray:'5,10'}).addTo(routeLayer);
-    const brng = bearingBetween([latitude, longitude], currentDest);
-    if(typeof rotateMarkerIcon === 'function') rotateMarkerIcon(driverMarker, brng);
-    const dist = L.latLng(latitude, longitude).distanceTo(L.latLng(currentDest[0], currentDest[1]));
-    statusBubble.textContent = `Distância: ${Math.round(dist)}m`;
-  }
-}
-
-// Ao clicar "Ir" no menu, define destino
-function startNavigationTo(row){
-  const coords = pontos.find(p=>p.nome===row[2])?.coords;
-  if(!coords){ alert('Ponto inválido'); return; }
-  currentDest = coords;
-  map.flyTo(coords, 17);
-  speak(`Rota para ${row[2]}`);
-  menu.classList.remove('open');
-  // desenha rota imediatamente
+/* ================== NOTIFICAR NOVAS MARCAÇÕES ================== */
+async function notifyNewBooking(message){
+  playBeep();
   if(driverMarker){
-    const pos = driverMarker.getLatLng();
-    updateDriverPosition({coords:{latitude: pos.lat, longitude: pos.lng}});
+    driverMarker.bindPopup(`<b>${message}</b>`).openPopup();
+  }
+  if('Notification' in window && Notification.permission === 'granted'){
+    try {
+      const n = new Notification('Nova marcação', { body: message, icon: 'https://cdn-icons-png.flaticon.com/512/60/60577.png' });
+      n.onclick = ()=>{ window.focus(); menu.classList.add('open'); };
+    } catch(e){ console.warn('notify err', e); }
+  } else {
+    statusBubble.textContent = message;
+    setTimeout(()=>{ statusBubble.textContent='Aguardando'; }, 5000);
   }
 }
 
-// Geolocalização
-if(navigator.geolocation){
-  navigator.geolocation.watchPosition(updateDriverPosition, e=>console.warn(e), { enableHighAccuracy:true, maximumAge:500, timeout:10000 });
+/* ================== CARREGAR MARCAÇÕES ================== */
+async function loadBookings(initial=false){
+  try {
+    const res = await fetch(SHEETS_URL);
+    const json = await res.json();
+    if(!json||!json.values||json.values.length<=1){ allData=[]; filteredData=[]; renderMenu(filteredData); return; }
+    const rows = json.values.slice(1);
+    const today = todayYMD();
+    let maxTimestamp = ultimaAtualizacao;
+
+    const kept = rows.filter(r=>{
+      const dt=parseSheetDateTime(r[0]);
+      if(!dt) return false;
+      const rowYMD = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      if(rowYMD!==today) return false;
+      if(dt.getHours()<19) return false;
+      const key = bookingKey(r);
+      if(embarcados.includes(key)) return false;
+      if(dt.getTime()>maxTimestamp) maxTimestamp=dt.getTime();
+      return true;
+    });
+
+    if(!initial && ultimaAtualizacao>0){
+      const novas = kept.filter(r=>{ const dt=parseSheetDateTime(r[0]); return dt && dt.getTime()>ultimaAtualizacao; });
+      novas.forEach(n=>{
+        const solicitante=n[1]||'';
+        const ponto=n[2]||'';
+        notifyNewBooking(`Novo agendamento: ${solicitante} - ${ponto}`);
+      });
+    }
+
+    allData = kept;
+    filteredData = allData.slice();
+    renderMenu(filteredData);
+    ultimaAtualizacao = maxTimestamp>0? maxTimestamp : (allData.length? parseSheetDateTime(allData[0][0]).getTime():0);
+  } catch(e){ console.error('Erro ao carregar planilha', e); }
 }
+loadBookings(true);
+setInterval(loadBookings, POLL_INTERVAL_MS);
+
+/* ================== NAVEGAÇÃO ================== */
+function startNavigationTo(row){
+  currentDest = pontos.find(p=>p.nome.toLowerCase() === (row[2]||'').trim().toLowerCase());
+  if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
+  if(driverMarker) map.panTo(driverMarker.getLatLng());
+  else map.panTo(currentDest.coords);
+  statusBubble.textContent = `Indo para ${currentDest.nome}`;
+  updateRoute();
+  speak(`Iniciando rota até ${currentDest.nome}`);
+  menu.classList.remove('open');
+}
+function updateRoute(){
+  routeLayer.clearLayers();
+  if(currentDest && driverMarker){
+    L.polyline([driverMarker.getLatLng(), currentDest.coords], {color:'cyan', weight:4, dashArray:'6,8'}).addTo(routeLayer);
+  }
+}
+
+/* ================== GEOLOCALIZAÇÃO ================== */
+function onGeoSuccess(pos){
+  const lat=pos.coords.latitude, lng=pos.coords.longitude;
+  if(!driverMarker){
+    driverMarker = L.marker([lat,lng], {icon:arrowIcon}).addTo(map);
+    map.setView([lat,lng], 16);
+  } else {
+    driverMarker.setLatLng([lat,lng]);
+  }
+  if(currentDest){
+    const brng = bearingBetween([lat,lng], currentDest.coords);
+    rotateMarkerIcon(driverMarker, brng);
+    arrowEl.style.transform = `rotate(${brng}deg)`;
+  }
+  updateRoute();
+}
+function onGeoError(err){ console.error('Geolocation error', err); statusBubble.textContent='GPS indisponível'; }
+if('geolocation' in navigator){
+  watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {enableHighAccuracy:true, maximumAge:1000});
+} else { statusBubble.textContent='Sem suporte a GPS'; }
+
+/* ============== embarcar / confirmar ============== */
+map.on('popupopen', e=>{
+  const node = e.popup._contentNode;
+  if(node && node.querySelector('.btn-confirm')){
+    node.querySelector('.btn-confirm').addEventListener('click', ()=>{
+      const rowKey = node.querySelector('.btn-confirm').dataset.key;
+      embarcados.push(decodeURIComponent(rowKey));
+      localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
+      speak('Passageiro confirmado.');
+      loadBookings(true);
+      map.closePopup();
+      currentDest = null;
+      routeLayer.clearLayers();
+      statusBubble.textContent='Aguardando';
+    });
+  }
+});
 </script>
 
 </body>
 </html>
+
