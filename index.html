@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Coleta Transfer Inauguração</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+<style>
+/* ================== MOBILE-FIRST / WEBAPP STYLE ================== */
+:root{
+  --bg1:#0f0c29; --bg2:#302b63; --accent:#00ff99; --panel:#121214;
+}
+html,body{height:100%; margin:0; font-family: system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+body{
+  background: linear-gradient(180deg,var(--bg1),var(--bg2));
+  color:#fff;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* Make it look like an app: full-screen header + map large */
+.header {
+  height:56px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:8px 14px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.header .title {
+  font-weight:700;
+  font-size:16px;
+  color:var(--accent);
+  letter-spacing:0.6px;
+}
+.app {
+  display:flex;
+  flex-direction:column;
+  height: calc(100vh - 56px);
+  gap:8px;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+/* Controls panel (compact) */
+.controls {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.select, .btn {
+  height:44px;
+  border-radius:10px;
+  border: none;
+  padding:0 12px;
+  font-size:15px;
+}
+.select { flex:1; background: rgba(255,255,255,0.02); color:#fff; }
+.btn { background: var(--accent); color:#000; font-weight:700; min-width:86px; }
+
+/* List panel (compact, scrollable) */
+.list {
+  margin-top:8px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.2), rgba(0,0,0,0.15));
+  border-radius:12px;
+  padding:8px;
+  max-height:28vh;
+  overflow:auto;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+}
+.item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px;
+  border-radius:8px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));
+  margin-bottom:8px;
+  font-size:14px;
+}
+.item .meta { display:flex; flex-direction:column; gap:4px; }
+.item .meta .hora { color: #cfeee0; font-weight:700; }
+.item .meta .ponto { color:#e6fff5; opacity:0.9; }
+.item button { background:#ff3b30; color:#fff; padding:6px 10px; border-radius:8px; border:none; font-weight:700; }
+
+/* Map big area */
+#map {
+  flex:1;
+  width:100%;
+  border-radius:12px;
+  box-shadow: 0 15px 50px rgba(0,0,0,0.6);
+  overflow:hidden;
+}
+
+/* Marker blink styling */
+@keyframes blinkGlow {
+  0%,100% { filter: drop-shadow(0 0 0px var(--accent)); transform:scale(1); }
+  50%    { filter: drop-shadow(0 0 18px var(--accent)); transform:scale(1.02); }
+}
+.leaflet-marker-icon.blink-alert { animation: blinkGlow 1s linear infinite; z-index:1000!important; }
+.leaflet-marker-icon.dimmed { opacity:0.28; }
+
+/* Desktop overlay: block UI and ask to open on mobile */
+#desktopOverlay {
+  display:none;
+  position:fixed; inset:0; z-index:99999;
+  background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.85));
+  color:#fff;
+  justify-content:center; align-items:center; text-align:center;
+  padding:20px;
+}
+#desktopOverlay .card{
+  background:rgba(255,255,255,0.03); padding:24px; border-radius:10px; max-width:420px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.6);
+}
+.small { font-size:14px; color:#ddd; margin-top:8px; }
+
+/* mobile-specific tweaks */
+@media(min-width:900px){
+  /* show overlay on wide screens to force mobile-like usage */
+  #desktopOverlay { display:flex; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="title">Coleta Transfer Inauguração</div>
+  <!-- optional small status -->
+</div>
+
+<!-- Desktop overlay (instruct to open on mobile) -->
+<div id="desktopOverlay" aria-hidden="true">
+  <div class="card">
+    <h3>Abra este painel no seu celular</h3>
+    <p class="small">Este painel foi otimizado como um webapp de navegação para celulares. Abra o link no navegador do seu celular para usar o mapa em modo app (GPS, rota e confirmação).</p>
+    <p class="small">Se precisar testar no desktop, remova a checagem de tela ou reduza a largura da janela.</p>
+  </div>
+</div>
+
+<!-- App container -->
+<div class="app" id="app">
+  <div class="controls">
+    <select id="hour-filter" class="select"><option value="">Mostrar todos (apenas >=19:00)</option></select>
+    <button class="btn" id="btnFilter">Filtrar</button>
+    <button class="btn" id="btnClear" style="background:#ff8c66">Limpar</button>
+  </div>
+
+  <div class="list" id="list">
+    <!-- items appended here -->
+  </div>
+
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script>
+/* ================== CONFIG / STATE ================== */
+const SHEET_ID = "132fh2lxEE2vzpfBmAbYCsk4UtRJAZ6fjdLEplUqbwFc";
+const API_KEY  = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
+const RANGE     = "A:E";
+const URL       = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+
+let allData = [];          // raw fetched rows (filtered to today && >=19:00 && not embarcado)
+let filteredData = [];     // current filtered by hour
+let embarcados = JSON.parse(localStorage.getItem('embarcados_v1')||'[]'); // array of keys
+const markersByName = {};  // leafet markers map
+let map=null, routingControl=null, driverMarker=null, watchId=null;
+
+/* fixed pontos list (same as before) */
+const pontos = [
+  {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
+  {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
+  {nome:"Ponto 28", coords:[-19.9986592,-43.9306448]},
+  {nome:"Ponto 29", coords:[-19.999421,-43.9326796]},
+  {nome:"Ponto 27", coords:[-20.0002531,-43.9314901]},
+  {nome:"Ponto 26", coords:[-20.0015469,-43.9333477]},
+  {nome:"Ponto 24", coords:[-20.003258,-43.9296246]},
+  {nome:"Ponto 25", coords:[-20.0050238,-43.9308419]},
+  {nome:"Ponto 21", coords:[-20.0027213,-43.9338594]},
+  {nome:"Ponto 22", coords:[-20.001474,-43.9355339]},
+  {nome:"Ponto 23", coords:[-20.0031588,-43.9364208]},
+  {nome:"Ponto 20", coords:[-20.0063663,-43.934352]},
+  {nome:"Ponto 19", coords:[-20.0085746,-43.9318072]},
+  {nome:"Ponto 17", coords:[-20.0104645,-43.9320381]},
+  {nome:"Ponto 18", coords:[-20.0088433,-43.9343321]},
+  {nome:"Ponto 12", coords:[-20.0088434,-43.9288248]},
+  {nome:"Ponto 13", coords:[-20.0094456,-43.9269802]},
+  {nome:"Ponto 14", coords:[-20.0075172,-43.9277972]},
+  {nome:"Ponto 16", coords:[-20.0068404,-43.9290337]},
+  {nome:"Ponto 15", coords:[-20.0079616,-43.9293497]},
+  {nome:"Ponto 09", coords:[-20.0110997,-43.9309597]},
+  {nome:"Ponto 10", coords:[-20.0120307,-43.9334509]},
+  {nome:"Ponto 11", coords:[-20.0098192,-43.9337648]},
+  {nome:"Ponto 08", coords:[-20.0102615,-43.9273848]},
+  {nome:"Ponto 05", coords:[-20.0114455,-43.9257426]},
+  {nome:"Ponto 06", coords:[-20.0112228,-43.9276231]},
+  {nome:"Ponto 07", coords:[-20.0108785,-43.9296971]},
+  {nome:"Ponto 04", coords:[-20.0068997,-43.9238609]},
+  {nome:"Ponto 03", coords:[-20.0047577,-43.9260624]},
+  {nome:"Ponto 02", coords:[-20.001753,-43.9270223]}
+];
+
+/* ================== UTIL ================== */
+function isMobile() {
+  return /Mobi|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+function todayDateString(){
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const dd = String(now.getDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+/* parse date/time string from sheet row[0] expecting format "DD/MM/YYYY HH:MM:SS" or "DD/MM/YYYY HH:MM" */
+function parseSheetDateTime(dtStr){
+  if(!dtStr) return null;
+  // try common formats
+  // If format contains '/', assume DD/MM/YYYY
+  if(dtStr.includes('/')){
+    const parts = dtStr.split(' ');
+    const date = parts[0].split('/');
+    const time = (parts[1]||'00:00').split(':');
+    const day = parseInt(date[0],10), month = parseInt(date[1],10)-1, year = parseInt(date[2],10);
+    const hour = parseInt(time[0]||'0',10), min = parseInt(time[1]||'0',10);
+    return new Date(year, month, day, hour, min);
+  }
+  // fallback ISO
+  const d = new Date(dtStr);
+  return isNaN(d) ? null : d;
+}
+function makeKeyForRow(row){
+  // unique key for a booking: solicitante + ponto + original datetime string
+  const solicitante = row[1]||'';
+  const ponto = row[2]||'';
+  const dt = (row[0]||'').trim();
+  return `${solicitante}___${ponto}___${dt}`;
+}
+
+/* ================== MAP ================== */
+function ensureMapAndMarkers(){
+  if(map) return;
+  map = L.map('map').setView([-19.9978072,-43.9266727],15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution: '&copy; OpenStreetMap' }).addTo(map);
+  const icon = L.icon({ iconUrl: 'Ponto.png', iconSize:[36,36], iconAnchor:[18,36] });
+  pontos.forEach(p=>{
+    const m = L.marker(p.coords,{icon}).addTo(map).bindPopup(p.nome);
+    markersByName[p.nome] = m;
+  });
+}
+
+/* get marker element */
+function getMarkerEl(marker){ return marker && (marker._icon || marker.getElement && marker.getElement()); }
+function clearAllBlink(){
+  Object.values(markersByName).forEach(m=>{
+    const el = getMarkerEl(m);
+    if(el){ el.classList.remove('blink-alert'); el.classList.remove('dimmed'); }
+    m.setZIndexOffset(0);
+  });
+}
+function setBlinkFor(names){
+  // dim all then blink selected
+  Object.values(markersByName).forEach(m=>{
+    const el = getMarkerEl(m); if(el) el.classList.add('dimmed');
+  });
+  names.forEach(name=>{
+    const m = markersByName[name];
+    if(!m) return;
+    const el = getMarkerEl(m);
+    if(!el) return;
+    el.classList.remove('dimmed');
+    el.classList.add('blink-alert');
+    m.setZIndexOffset(1000);
+    // click on marker to confirm
+    el.onclick = ()=> {
+      // try find booking(s) matching this ponto in filteredData; if multiple, show first
+      const found = (filteredData || allData).find(r=>r[2]===name);
+      if(found) confirmEmbarque(found);
+    };
+  });
+}
+
+/* ================== UI (list / filter) ================== */
+const listEl = document.getElementById('list');
+const hourSelect = document.getElementById('hour-filter');
+
+function renderList(data){
+  listEl.innerHTML = '';
+  if(!data.length){
+    listEl.innerHTML = `<div style="padding:12px;color:#ddd">Nenhum agendamento encontrado (apenas agendamentos a partir das 19:00 são carregados).</div>`;
+    clearAllBlink();
+    return;
+  }
+  data.forEach(row=>{
+    const dt = row[0]||'';
+    const hora = (parseSheetDateTime(dt) || '').toTimeString ? (parseSheetDateTime(dt)||'').toTimeString().slice(0,5) : (dt.split(' ')[1]||'');
+    const solicitante = row[1]||'';
+    const ponto = row[2]||'';
+    const key = makeKeyForRow(row);
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.innerHTML = `
+      <div class="meta">
+        <div class="hora">${hora}</div>
+        <div class="ponto">${ponto}</div>
+        <div style="font-size:12px;color:#bfe"> ${solicitante}</div>
+      </div>
+      <div>
+        <button onclick='confirmEmbarqueByKey("${encodeURIComponent(key)}")'>EMBARCAR</button>
+      </div>
+    `;
+    listEl.appendChild(item);
+  });
+  // blink markers for these pontos
+  setBlinkFor(data.map(r=>r[2]));
+}
+
+/* populate hour select from data (unique hour strings) */
+function populateHourFilter(data){
+  const set = new Set();
+  data.forEach(r=>{
+    const d = parseSheetDateTime(r[0]);
+    if(d) set.add(String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'));
+  });
+  const arr = Array.from(set).sort();
+  hourSelect.innerHTML = '<option value="">Mostrar todos (>=19:00)</option>';
+  arr.forEach(h=>{
+    const opt = document.createElement('option'); opt.value = h; opt.textContent = h; hourSelect.appendChild(opt);
+  });
+}
+
+/* ================== FETCH & FILTER ================== */
+/* Only load rows for today AND time >= 19:00 AND not already embarcado (localStorage) */
+async function fetchData(){
+  try{
+    const res = await fetch(URL);
+    const json = await res.json();
+    if(!json || !json.values || json.values.length<=1){ allData = []; renderList([]); populateHourFilter([]); return; }
+    const rows = json.values.slice(1);
+    const today = todayDateString(); // "YYYY-MM-DD"
+    const filtered = rows.filter(r=>{
+      const dtStr = r[0]||'';
+      const dt = parseSheetDateTime(dtStr);
+      if(!dt) return false;
+      // check date equal today
+      // convert dt to yyyy-mm-dd
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth()+1).padStart(2,'0');
+      const dd = String(dt.getDate()).padStart(2,'0');
+      const rowDate = `${yyyy}-${mm}-${dd}`;
+      if(rowDate !== today) return false;
+      // check time >= 19:00
+      if(dt.getHours() < 19) return false;
+      // exclude embarcados saved in localStorage
+      const key = makeKeyForRow(r);
+      if(embarcados.includes(key)) return false;
+      return true;
+    });
+    allData = filtered;
+    filteredData = allData.slice(); // default all
+    populateHourFilter(allData);
+    renderList(filteredData);
+    ensureMapAndMarkers();
+  }catch(e){ console.error(e); alert("Erro ao carregar dados."); }
+}
+
+/* ================== FILTER / ROUTING ================== */
+function applyFilters(){
+  const val = hourSelect.value;
+  if(!val){
+    filteredData = allData.slice();
+  } else {
+    filteredData = allData.filter(r=>{
+      const dt = parseSheetDateTime(r[0]);
+      if(!dt) return false;
+      const hhmm = String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
+      return hhmm === val;
+    });
+  }
+  renderList(filteredData);
+  if(filteredData.length){
+    // show map and route
+    document.getElementById('map').style.display='block';
+    fitMapToFiltered();
+  } else {
+    // hide map if none
+    // map stays but we can clear blink
+    clearAllBlink();
+  }
+}
+
+/* focus map to points in filteredData and start watchPosition */
+function fitMapToFiltered(){
+  ensureMapAndMarkers();
+  // create route from driver's position to all pontos in order
+  const names = filteredData.map(r=>r[2]).filter(Boolean);
+  const agendados = pontos.filter(p=>names.includes(p.nome));
+  if(agendados.length === 0) return;
+
+  // show markers blinking already done in renderList -> setBlinkFor
+  // start geolocation watch to update driver marker and route
+  if(navigator.geolocation){
+    if(watchId===null){
+      watchId = navigator.geolocation.watchPosition(pos=>{
+        const latlng = [pos.coords.latitude,pos.coords.longitude];
+        if(!driverMarker){
+          const busIcon = L.icon({ iconUrl:'Onibus.png', iconSize:[40,40], iconAnchor:[20,20] });
+          driverMarker = L.marker(latlng,{icon:busIcon}).addTo(map).bindPopup('Você está aqui');
+        } else driverMarker.setLatLng(latlng);
+        updateRoute(latlng, agendados);
+        // check proximity to any agendado: if within 40m show small popup (we already have marker click to confirm)
+      }, err=>{
+        console.warn('geoloc err',err);
+      }, { enableHighAccuracy:true, maximumAge:3000, timeout:10000 });
+    }
+  } else {
+    // center to first ponto if no gps
+    const group = L.featureGroup(agendados.map(p=>markersByName[p.nome]));
+    if(group) map.fitBounds(group.getBounds().pad(0.2));
+  }
+}
+
+/* Build route control with waypoints */
+function updateRoute(userLatLng, agendados){
+  if(routingControl){ map.removeControl(routingControl); routingControl=null; }
+  const waypoints = [L.latLng(userLatLng[0], userLatLng[1])].concat(agendados.map(p=>L.latLng(p.coords[0], p.coords[1])));
+  routingControl = L.Routing.control({
+    waypoints,
+    routeWhileDragging:false,
+    draggableWaypoints:false,
+    addWaypoints:false,
+    createMarker: ()=> null,
+    show:false,
+    collapsible:true
+  }).addTo(map);
+  // hide default container
+  const rc = document.querySelector('.leaflet-routing-container');
+  if(rc) rc.style.display='none';
+}
+
+/* ================== CONFIRMAR EMBARQUE ================== */
+/* confirm by passing the row object */
+function confirmEmbarque(row){
+  // Save unique key to embarcados and localStorage so it won't return on reload
+  const key = makeKeyForRow(row);
+  if(!embarcados.includes(key)) embarcados.push(key);
+  localStorage.setItem('embarcados_v1', JSON.stringify(embarcados));
+
+  // Remove from current arrays
+  allData = allData.filter(r => makeKeyForRow(r) !== key);
+  filteredData = filteredData.filter(r => makeKeyForRow(r) !== key);
+
+  // Stop blinking and remove marker optionally (we just stop blink)
+  const ponto = row[2];
+  const marker = markersByName[ponto];
+  if(marker){
+    const el = getMarkerEl(marker);
+    if(el){ el.classList.remove('blink-alert'); el.classList.remove('dimmed'); }
+    // optionally remove marker from map:
+    // map.removeLayer(marker); delete markersByName[ponto];
+  }
+
+  // Re-render list & blink set
+  renderList(filteredData.length ? filteredData : allData);
+  // Recompute route
+  const names = (filteredData.length ? filteredData : allData).map(r=>r[2]);
+  const agendados = pontos.filter(p=>names.includes(p.nome));
+  if(agendados.length && driverMarker){
+    const pos = driverMarker.getLatLng();
+    updateRoute([pos.lat,pos.lng], agendados);
+  } else if(routingControl){
+    map.removeControl(routingControl); routingControl=null;
+  }
+}
+
+/* helper wrapper to call from DOM encoded key */
+function confirmEmbarqueByKey(encodedKey){
+  const key = decodeURIComponent(encodedKey);
+  const row = (filteredData.concat(allData)).find(r => makeKeyForRow(r) === key);
+  if(row) confirmEmbarque(row);
+}
+
+/* ================== INIT / BIND ================== */
+document.getElementById('btnFilter').addEventListener('click', ()=> {
+  applyFilters();
+});
+document.getElementById('btnClear').addEventListener('click', ()=> {
+  hourSelect.value='';
+  filteredData = allData.slice();
+  renderList(filteredData);
+  clearAllBlink();
+  if(routingControl){ map.removeControl(routingControl); routingControl=null; }
+});
+
+/* show/hide desktop overlay depending on screen */
+(function guardDesktop(){
+  const ctrl = document.getElementById('desktopOverlay');
+  if(!isMobile()){
+    ctrl.style.display = 'flex';
+    document.getElementById('app').style.filter = 'blur(2px)';
+    // still load nothing further (you can remove this to test on desktop)
+  } else {
+    ctrl.style.display = 'none';
+    // load data & map
+    fetchData();
+  }
+})();
+
+</script>
+</body>
+</html>
