@@ -5,12 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Coleta Transfer Inauguração - Driver</title>
 
-<!-- estilos mobile-first -->
 <style>
   :root{
-    --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.06);
+    --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5;
   }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb; -webkit-font-smoothing:antialiased;}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb;}
   header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
   .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
   .title{color:var(--accent); font-weight:700; font-size:17px;}
@@ -27,21 +26,16 @@
   .btn-go{background:#00bfff;color:#000;}
   .btn-confirm{background:#ff3b30;color:#fff;}
   #menuToggle{position:fixed;top:8px;left:8px;z-index:10000;background:var(--accent);color:#000;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.4);}
-  #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.8); z-index:999998; align-items:center; justify-content:center;}
-  #desktopOverlay .card{background:rgba(255,255,255,0.02); padding:18px;border-radius:12px; color:#fff; max-width:420px; text-align:center;}
-  @media(min-width:900px){ #desktopOverlay{display:flex;} #map{filter:blur(3px);} }
-  #arrow{
-    position:fixed; right:12px; bottom:110px; z-index:100000; width:72px; height:72px; background:rgba(0,0,0,0.55); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.6);
-    transform-origin:center center; transition:transform 0.25s linear;
-  }
+  #desktopOverlay{display:flex; position:fixed;inset:0; background:rgba(0,0,0,0.85); z-index:100003; align-items:center; justify-content:center; gap:10px; flex-direction:column;}
+  #desktopOverlay .card{background:rgba(255,255,255,0.03); padding:20px;border-radius:12px; color:#fff; max-width:420px; text-align:center;}
+  #desktopOverlay .card button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer;}
+  #arrow{position:fixed; right:12px; bottom:110px; z-index:100000; width:72px; height:72px; background:rgba(0,0,0,0.55); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.6); transform-origin:center center; transition:transform 0.25s linear;}
   #arrow svg{width:42px;height:42px; fill:var(--accent);}
   #statusBubble{position:fixed;right:12px;bottom:24px;z-index:100000;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:10px;color:#cfe;font-weight:700;font-size:13px;}
-  .hint{font-size:12px;color:#9df;margin-top:6px;}
-  #newAlert{
-    position:fixed; top:80px; right:12px; background:#ff3b30; color:#fff; padding:12px 16px; border-radius:12px; font-weight:700; z-index:100001; display:none;
-  }
-  #newAlert button{margin-left:12px;background:#000;color:#fff;border:none;padding:4px 8px;border-radius:6px; cursor:pointer;}
-  #confirmBtn{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:100002;}
+  #newAlert{position:fixed; top:80px; right:12px; background:#ff3b30; color:#fff; padding:12px 16px; border-radius:12px; font-weight:700; z-index:100001; display:none; max-width:320px;}
+  #newAlert .msg{display:block; margin-bottom:8px;}
+  #newAlert button{margin-left:8px;background:#000;color:#fff;border:none;padding:6px 8px;border-radius:6px; cursor:pointer;}
+  #confirmBtn{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:100002;display:none;}
 </style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -64,11 +58,16 @@
 <div id="arrow" title="Direção" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 L3 21 L12 17 L21 21 Z"></path></svg></div>
 <div id="statusBubble">Aguardando</div>
 
-<div id="newAlert"><span id="alertText"></span><button onclick="closeAlert()">Fechar</button></div>
-<div id="desktopOverlay" aria-hidden="true">
+<div id="newAlert"><span class="msg" id="alertText"></span><button id="closeAlertBtn">Fechar</button></div>
+<button id="confirmBtn" class="btn btn-confirm">Confirmar embarque</button>
+
+<!-- Overlay inicial pede permissões -->
+<div id="desktopOverlay" aria-hidden="false">
   <div class="card">
-    <h2 style="color:#00ffd5;margin:0 0 8px">Abra no celular</h2>
-    <p style="color:#ddd;margin:0">Este painel foi otimizado como webapp de navegação para celular. Abra no navegador do seu celular para usar GPS e notificações.</p>
+    <h2 style="color:#00ffd5;margin:0 0 8px">Permissões</h2>
+    <p style="color:#ddd;margin:0">Para usar o app você deve permitir Notificações e Geolocalização. Clique em "Permitir" e, quando o navegador pedir, aceite.</p>
+    <button id="grantPermissionsBtn">Permitir GPS & Notificações</button>
+    <button id="skipPermissionsBtn" style="margin-top:8px;background:#444;color:#fff">Continuar sem permissões</button>
   </div>
 </div>
 
@@ -76,27 +75,39 @@
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
 <script>
-/* ================== CONFIG ================== */
+/* ========== CONFIG ========== */
 const SHEET_ID = "132fh2lxEE2vzpfBmAbYCsk4UtRJAZ6fjdLEplUqbwFc";
 const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
 const RANGE = "A:E";
 const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
-/* ================== ESTADO ================== */
-let allData = [], filteredData = [], embarcados = JSON.parse(localStorage.getItem('embarcados_v3') || '[]');
-let map, driverMarker, routeControl, currentDest = null;
-let watchId = null;
-let ultimaAtualizacao = 0; 
 const POLL_INTERVAL_MS = 15000;
+const ULT_KEY = 'ultimaAtualizacao_v1';
+const EMBARCADOS_KEY = 'embarcados_v3';
 
+/* ========== ESTADO ========== */
+let allData = [], filteredData = [];
+let embarcados = JSON.parse(localStorage.getItem(EMBARCADOS_KEY) || '[]');
+let ultimaAtualizacao = Number(localStorage.getItem(ULT_KEY) || '0');
+let newAlerts = [];
+
+let map, driverMarker = null, routeControl = null, currentDest = null, destMarker = null;
+let watchId = null;
+
+/* ========== ELEMENTOS ========== */
 const menu = document.getElementById('menu');
 const menuToggle = document.getElementById('menuToggle');
 const arrowEl = document.getElementById('arrow');
 const statusBubble = document.getElementById('statusBubble');
-const newAlert = document.getElementById('newAlert');
+const newAlertEl = document.getElementById('newAlert');
 const alertText = document.getElementById('alertText');
+const closeAlertBtn = document.getElementById('closeAlertBtn');
+const confirmBtn = document.getElementById('confirmBtn');
+const desktopOverlay = document.getElementById('desktopOverlay');
+const grantPermissionsBtn = document.getElementById('grantPermissionsBtn');
+const skipPermissionsBtn = document.getElementById('skipPermissionsBtn');
 
-/* ================== PONTOS FIXOS ================== */
+/* ========== PONTOS FIXOS ========== */
 const pontos = [
   {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
   {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
@@ -130,204 +141,230 @@ const pontos = [
   {nome:"Ponto 02", coords:[-20.001753,-43.9270223]}
 ];
 
-/* ================== UTIL ================== */
-function todayYMD(){ 
-  const n = new Date(); 
-  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; 
-}
-
+/* ========== UTIL ========== */
+function todayYMD(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
 function parseSheetDateTime(val){
   if(!val) return null;
   if(val.includes('/')){
-    const [dpart, tpart='00:00'] = val.split(' ');
+    const [dpart,tpart='00:00'] = val.split(' ');
     const [d,m,y] = dpart.split('/');
     const [hh,mm] = tpart.split(':');
-    const dt = new Date(Number(y), Number(m)-1, Number(d), Number(hh||0), Number(mm||0));
-    return isNaN(dt) ? null : dt;
+    const dt = new Date(Number(y),Number(m)-1,Number(d),Number(hh||0),Number(mm||0));
+    return isNaN(dt)?null:dt;
   }
   const dt = new Date(val);
-  return isNaN(dt) ? null : dt;
+  return isNaN(dt)?null:dt;
 }
+function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
 
-function bookingKey(row){ 
-  return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; 
-}
-
-/* ================== UI MENU ================== */
-function renderMenu(rows){
-  menu.innerHTML = '';
-  if(!rows.length){
-    const no = document.createElement('div');
-    no.style.padding = '12px';
-    no.style.color = '#cfe';
-    no.textContent = 'Nenhum agendamento disponível (apenas reservas ≥ 19:00).';
-    menu.appendChild(no);
-    return;
-  }
-  rows.forEach(r=>{
-    const dt = parseSheetDateTime(r[0]);
-    const hh = dt ? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '';
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML = `<div class="meta"><div class="hour">${hh}</div><div class="point">${r[2]||''}</div><div class="name">${r[1]||''}</div></div>
-      <div><button class="btn btn-go" data-key="${encodeURIComponent(bookingKey(r))}">Ir</button></div>`;
-    menu.appendChild(div);
-    div.querySelector('.btn-go').addEventListener('click', ()=> startNavigationTo(r));
-  });
-}
-
-menuToggle.addEventListener('click', ()=>{
-  menu.classList.toggle('open'); 
-  if('Notification' in window && Notification.permission==='default'){ 
-    Notification.requestPermission().catch(()=>{}); 
-  } 
-});
-
-/* ================== MAP INIT ================== */
+/* ========== MAP INIT ========== */
 map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 
-/* Ícone seta (motorista) */
-const arrowIcon = L.icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/60/60577.png",
-  iconSize: [44,44],
-  iconAnchor: [22,22]
-});
+/* Ícone do motorista (seta) */
+const arrowIcon = L.icon({ iconUrl: 'https://cdn-icons-png.flaticon.com/512/60/60577.png', iconSize:[44,44], iconAnchor:[22,22] });
 
-function rotateMarkerIcon(marker, angleDegrees){ 
-  if(!marker||!marker._icon) return; 
-  marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`; 
-  marker._icon.style.transition = 'transform 0.2s linear'; 
+function rotateMarkerIcon(marker, angleDegrees){
+  if(!marker || !marker._icon) return;
+  marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`;
+  marker._icon.style.transition = 'transform 0.2s linear';
 }
 
-/* ================== ALERTA SONORO ================== */
+/* ========== ALERTA SONORO CONTÍNUO ========== */
 let beepInterval = null;
-const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+const audioCtx = (window.AudioContext||window.webkitAudioContext) ? new (window.AudioContext||window.webkitAudioContext)() : null;
+
 function playBeepOnce(){
   if(!audioCtx) return;
+  try{ audioCtx.resume?.(); }catch(e){}
   const o = audioCtx.createOscillator();
   const g = audioCtx.createGain();
-  o.type = 'sine';
-  o.frequency.value = 880;
-  o.connect(g);
-  g.connect(audioCtx.destination);
+  o.type='sine'; o.frequency.value=880;
+  o.connect(g); g.connect(audioCtx.destination);
   g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.2, audioCtx.currentTime+0.01);
   o.start();
-  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
-  setTimeout(()=>{ o.stop(); }, 500);
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.45);
+  setTimeout(()=>{ try{o.stop();}catch(e){} }, 500);
 }
 function startAlertBeep(){
-  if(beepInterval) return; 
-  playBeepOnce(); 
-  beepInterval = setInterval(playBeepOnce, 1000); 
+  if(beepInterval) return;
+  playBeepOnce();
+  beepInterval = setInterval(playBeepOnce, 1000);
 }
-function stopAlertBeep(){
-  if(beepInterval){
-    clearInterval(beepInterval);
-    beepInterval = null;
-  }
+function stopAlertBeep(){ if(beepInterval){ clearInterval(beepInterval); beepInterval=null; } }
+
+/* ========== ALERTA VISUAL + SONORO ========== */
+closeAlertBtn.addEventListener('click', ()=>{
+  clearNewAlerts();
+});
+
+function clearNewAlerts(){
+  newAlerts = [];
+  alertText.textContent = '';
+  newAlertEl.style.display = 'none';
+  stopAlertBeep();
 }
 
-/* ================== ALERTA NOVA SOLICITAÇÃO ================== */
-function showAlert(message){
-  alertText.textContent = message;
-  newAlert.style.display = 'block';
-  startAlertBeep(); 
-}
-function closeAlert(){
-  newAlert.style.display='none';
-  stopAlertBeep(); 
-}
-async function notifyNewBooking(message){
-  showAlert(message);
-  if(driverMarker){
-    driverMarker.bindPopup(`<b>${message}</b>`).openPopup();
+function showAlertUI(){
+  if(newAlerts.length===0) return;
+  if(newAlerts.length===1){
+    alertText.textContent = newAlerts[0];
+  } else {
+    alertText.textContent = `${newAlerts.length} novas marcações — ${newAlerts.map(s=>s.replace('Novo agendamento: ','')).join(' · ')}`;
   }
-  if('Notification' in window && Notification.permission === 'granted'){
-    try {
-      const n = new Notification('Nova marcação', { body: message, icon: 'carro.png' });
+  newAlertEl.style.display = 'block';
+  startAlertBeep();
+}
+
+/* ========== NOTIFICAÇÕES (nativas + UI) ========== */
+async function requestNotificationPermission(){
+  if(!('Notification' in window)) return false;
+  try{
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+  }catch(e){ return false; }
+}
+
+async function notifyNative(title, body){
+  if(!('Notification' in window)) return;
+  if(Notification.permission === 'granted'){
+    try{
+      const n = new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/60/60577.png' });
       n.onclick = ()=>{ window.focus(); menu.classList.add('open'); };
-    } catch(e){ console.warn('notify err', e); }
+    }catch(e){ console.warn('notify err', e); }
   }
 }
 
-/* ================== CARREGAR MARCAÇÕES ================== */
+/* ========== CARREGAR MARCAÇÕES DA PLANILHA ========== */
 async function loadBookings(initial=false){
-  try {
+  try{
     const res = await fetch(SHEETS_URL);
     const json = await res.json();
-    if(!json||!json.values||json.values.length<=1){ allData=[]; filteredData=[]; renderMenu(filteredData); return; }
+    if(!json || !json.values || json.values.length<=1){
+      allData=[]; filteredData=[]; renderMenu(filteredData); return;
+    }
     const rows = json.values.slice(1);
-    const today = todayYMD();
-    let maxTimestamp = ultimaAtualizacao;
-
+    const todayY = todayYMD();
+    let maxTs = ultimaAtualizacao || 0;
     const kept = rows.filter(r=>{
-      const dt=parseSheetDateTime(r[0]);
+      const dt = parseSheetDateTime(r[0]);
       if(!dt) return false;
-      const rowYMD = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-      if(rowYMD!==today) return false;
-      if(dt.getHours()<19) return false;
+      const rowY = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      if(rowY !== todayY) return false;
+      if(dt.getHours() < 19) return false;
       const key = bookingKey(r);
       if(embarcados.includes(key)) return false;
-      if(dt.getTime()>maxTimestamp) maxTimestamp=dt.getTime();
+      if(dt.getTime() > maxTs) maxTs = dt.getTime();
       return true;
     });
 
-    if(!initial && ultimaAtualizacao>0){
-      const novas = kept.filter(r=>{ const dt=parseSheetDateTime(r[0]); return dt && dt.getTime()>ultimaAtualizacao; });
-      novas.forEach(n=>{
-        const solicitante=n[1]||'';
-        const ponto=n[2]||'';
-        notifyNewBooking(`Novo agendamento: ${solicitante} - ${ponto}`);
+    // detectar novas (apenas se não for load inicial)
+    if(!initial && ultimaAtualizacao > 0){
+      const novas = kept.filter(r=>{
+        const dt = parseSheetDateTime(r[0]);
+        return dt && dt.getTime() > ultimaAtualizacao;
       });
+      for(const n of novas){
+        const solicitante = n[1]||'';
+        const ponto = n[2]||'';
+        const msg = `Novo agendamento: ${solicitante} - ${ponto}`;
+        newAlerts.push(msg);
+        showAlertUI();
+        // native notification (se permitido)
+        notifyNative('Nova marcação', `${solicitante} - ${ponto}`);
+      }
     }
 
     allData = kept;
     filteredData = allData.slice();
     renderMenu(filteredData);
-    ultimaAtualizacao = maxTimestamp>0? maxTimestamp : (allData.length? parseSheetDateTime(allData[0][0]).getTime():0);
-  } catch(e){ console.error('Erro ao carregar planilha', e); }
+
+    ultimaAtualizacao = maxTs>0? maxTs : ultimaAtualizacao;
+    localStorage.setItem(ULT_KEY, String(ultimaAtualizacao||0));
+  }catch(e){
+    console.error('Erro ao carregar planilha', e);
+  }
 }
-loadBookings(true);
-setInterval(loadBookings, POLL_INTERVAL_MS);
 
-/* ================== NAVEGAÇÃO ================== */
-function startNavigationTo(row){
-  currentDest = pontos.find(p=>p.nome.toLowerCase() === (row[2]||'').trim().toLowerCase());
-  if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
+/* ========== RENDER MENU ========== */
+function renderMenu(rows){
+  menu.innerHTML = '';
+  if(!rows || rows.length===0){
+    const no = document.createElement('div');
+    no.style.padding='12px';
+    no.style.color='#cfe';
+    no.textContent='Nenhum agendamento disponível (apenas reservas ≥ 19:00).';
+    menu.appendChild(no);
+    return;
+  }
+  rows.forEach(r=>{
+    const dt = parseSheetDateTime(r[0]);
+    const hh = dt? `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '';
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML = `<div class="meta"><div class="hour">${hh}</div><div class="point">${r[2]||''}</div><div class="name">${r[1]||''}</div></div>
+      <div><button class="btn btn-go">Ir</button></div>`;
+    menu.appendChild(div);
+    div.querySelector('.btn-go').addEventListener('click', ()=> startNavigationTo(r));
+  });
+}
 
-  // Fala o ponto em voz alta
+/* ========== NAVEGAÇÃO (rota pelas ruas) ========== */
+function speak(text){
   if('speechSynthesis' in window){
-    const utter = new SpeechSynthesisUtterance(`Indo para ${currentDest.nome}`);
-    utter.lang = 'pt-BR';
-    window.speechSynthesis.speak(utter);
+    try{ window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang='pt-BR'; window.speechSynthesis.speak(u); return; }catch(e){ console.warn(e); }
+  }
+}
+
+function startNavigationTo(row){
+  // encontrar ponto por nome na lista fixa
+  const nome = (row[2]||'').trim().toLowerCase();
+  currentDest = pontos.find(p=>p.nome.toLowerCase() === nome);
+  if(!currentDest){
+    alert('Ponto não encontrado no mapa: '+row[2]);
+    return;
   }
 
-  if(driverMarker) map.panTo(driverMarker.getLatLng());
-  else map.panTo(currentDest.coords);
+  // fala o ponto
+  speak(`Indo para ${currentDest.nome}`);
+
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
   menu.classList.remove('open');
 
-  if(routeControl) map.removeControl(routeControl);
+  // remove rota anterior
+  if(routeControl){
+    try{ routeControl.remove(); }catch(e){}
+    routeControl = null;
+  }
+  if(destMarker){
+    try{ map.removeLayer(destMarker); }catch(e){}
+    destMarker = null;
+  }
 
+  // desenhar marcador do destino
+  destMarker = L.marker(currentDest.coords).addTo(map).bindPopup(`<b>${currentDest.nome}</b>`);
+
+  // criar rota a partir da posição atual (se tiver) ou centralizar
   if(driverMarker){
+    const from = driverMarker.getLatLng();
+    const to = L.latLng(currentDest.coords[0], currentDest.coords[1]);
     routeControl = L.Routing.control({
-      waypoints: [
-        driverMarker.getLatLng(),
-        L.latLng(currentDest.coords[0], currentDest.coords[1])
-      ],
-      routeWhileDragging: false,
-      show: false,
-      addWaypoints: false,
+      waypoints: [ from, to ],
+      routeWhileDragging:false,
+      show:false,
+      addWaypoints:false,
+      createMarker: ()=>null,
       lineOptions: { styles:[{color:'cyan', weight:4}] },
-      createMarker: function() { return null; },
       router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1' })
     }).addTo(map);
+  } else {
+    // se motorista ainda não tem posição, centraliza no destino
+    map.panTo(currentDest.coords);
   }
 }
 
-/* ================== GEOLOCALIZAÇÃO ================== */
+/* ========== ACOMPANHAMENTO GPS em tempo real ========== */
 function bearingBetween(from, to){
   const lat1 = from[0]*Math.PI/180, lon1 = from[1]*Math.PI/180;
   const lat2 = to[0]*Math.PI/180, lon2 = to[1]*Math.PI/180;
@@ -338,51 +375,119 @@ function bearingBetween(from, to){
 
 function checkArrival(lat, lng){
   if(!currentDest) return;
-  const distance = map.distance([lat,lng], currentDest.coords);
-  if(distance < 30){ // chegou
+  const dist = map.distance([lat,lng], currentDest.coords);
+  // considerar chegada em 30 metros
+  if(dist <= 30){
     statusBubble.textContent = `Chegou em ${currentDest.nome}`;
-    if(!document.getElementById('confirmBtn')){
-      const btn = document.createElement('button');
-      btn.id = 'confirmBtn';
-      btn.className = 'btn btn-confirm';
-      btn.textContent = 'Confirmar embarque';
-      btn.onclick = ()=>{
-        const row = filteredData.find(r=>r[2]===currentDest.nome);
-        if(row){
-          embarcados.push(bookingKey(row));
-          localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
-        }
-        loadBookings(true);
-        currentDest = null;
-        statusBubble.textContent = 'Aguardando';
-        btn.remove();
-      };
-      document.body.appendChild(btn);
-    }
+    // mostrar botão confirmar
+    confirmBtn.style.display = 'block';
+    confirmBtn.onclick = () => {
+      // encontrar row correspondente (pode haver várias; escolhemos a primeira)
+      const row = filteredData.find(r=> (r[2]||'').trim().toLowerCase() === (currentDest.nome||'').trim().toLowerCase());
+      if(row){
+        const key = bookingKey(row);
+        embarcados.push(key);
+        localStorage.setItem(EMBARCADOS_KEY, JSON.stringify(embarcados));
+      }
+      // limpar rota/marker
+      if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl = null;}
+      if(destMarker){ try{ map.removeLayer(destMarker);}catch(e){} destMarker = null;}
+      currentDest = null;
+      confirmBtn.style.display = 'none';
+      // recarregar lista e limpar alert se for referente a mesma solicitação
+      loadBookings(true);
+      clearNewAlerts();
+      statusBubble.textContent = 'Aguardando';
+    };
+  } else {
+    // ainda a caminho
+    confirmBtn.style.display = 'none';
   }
 }
 
 function onGeoSuccess(pos){
-  const lat=pos.coords.latitude, lng=pos.coords.longitude;
+  const lat = pos.coords.latitude, lng = pos.coords.longitude;
+  // criar marker do motorista se ainda não existe
   if(!driverMarker){
-    driverMarker = L.marker([lat,lng], {icon:arrowIcon}).addTo(map);
+    driverMarker = L.marker([lat,lng], {icon: arrowIcon}).addTo(map);
     map.setView([lat,lng], 16);
   } else {
     driverMarker.setLatLng([lat,lng]);
   }
-  if(currentDest){
+
+  // atualizar rota start
+  if(currentDest && routeControl){
+    try{
+      routeControl.spliceWaypoints(0,1, L.latLng(lat,lng));
+    }catch(e){
+      // alguns builds do L.Routing podem não expor spliceWaypoints exatamente assim; ignorar
+    }
+    // atualizar orientação do ícone
     const brng = bearingBetween([lat,lng], currentDest.coords);
     rotateMarkerIcon(driverMarker, brng);
     arrowEl.style.transform = `rotate(${brng}deg)`;
-    if(routeControl) routeControl.spliceWaypoints(0,1,L.latLng(lat,lng));
+    // dist
+    const dist = map.distance([lat,lng], currentDest.coords);
+    statusBubble.textContent = `Distância: ${Math.round(dist)} m`;
+    // checar chegada
     checkArrival(lat,lng);
   }
 }
-function onGeoError(err){ console.error('Geolocation error', err); statusBubble.textContent='GPS indisponível'; }
-if('geolocation' in navigator){
-  watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {enableHighAccuracy:true, maximumAge:1000});
-} else { statusBubble.textContent='Sem suporte a GPS'; }
 
+function onGeoError(err){
+  console.warn('Geolocation error', err);
+  statusBubble.textContent = 'GPS indisponível';
+}
+
+/* ========== PERMISSÕES INICIAIS ========== */
+async function startPermissionsFlow(){
+  // resume audio context on user gesture (allow beep)
+  try{ await audioCtx.resume(); }catch(e){}
+
+  // pedir notificações
+  if('Notification' in window){
+    try{ await Notification.requestPermission(); }catch(e){}
+  }
+  // pedir geolocalização (getCurrentPosition para forçar prompt)
+  if('geolocation' in navigator){
+    navigator.geolocation.getCurrentPosition((p)=>{ console.log('geo ok',p); startGeoWatch(); }, (err)=>{ console.warn('geo denied',err); startGeoWatch(); }, { enableHighAccuracy:true, timeout:10000 });
+  } else {
+    startGeoWatch();
+  }
+
+  // esconder overlay
+  desktopOverlay.style.display = 'none';
+}
+
+function skipPermissionsAndStart(){
+  // mesmo que o usuário recuse, iniciar o watch para tentar obter localização
+  startGeoWatch();
+  desktopOverlay.style.display = 'none';
+}
+
+/* iniciar watchPosition */
+function startGeoWatch(){
+  if('geolocation' in navigator && !watchId){
+    watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, { enableHighAccuracy:true, maximumAge:1000, timeout:10000 });
+  }
+}
+
+/* ========== INICIALIZAÇÃO ========== */
+menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); });
+
+grantPermissionsBtn.addEventListener('click', ()=> startPermissionsFlow());
+skipPermissionsBtn.addEventListener('click', ()=> skipPermissionsAndStart());
+closeAlertBtn.addEventListener('click', ()=> clearNewAlerts());
+
+// iniciar: mostrar overlay até o motorista clicar em permitir/continuar
+desktopOverlay.style.display = 'flex';
+
+// carregar bookings inicialmente (não notificar as existentes)
+loadBookings(true);
+setInterval(()=> loadBookings(false), POLL_INTERVAL_MS);
+
+// se o usuário já havia dado permissão antes (localStorage), podemos pular overlay
+// (mas como pediste para pedir antes, deixamos o overlay — o botão "continuar sem permissões" permite seguir)
 </script>
 </body>
 </html>
