@@ -89,6 +89,7 @@
     <p style="color:#ddd;margin:0">Toque em <strong>Iniciar</strong> para ativar GPS, audio e notificações (necessário para o WebApp funcionar corretamente no celular).</p>
     <button id="grantPermissionsBtn">Iniciar</button>
     <button id="skipPermissionsBtn" class="secondary">Continuar sem permissões</button>
+    <button id="startBtn">🚀 Iniciar</button>
   </div>
 </div>
 
@@ -133,6 +134,7 @@ const confirmBtn = document.getElementById('confirmBtn');
 const desktopOverlay = document.getElementById('desktopOverlay');
 const grantPermissionsBtn = document.getElementById('grantPermissionsBtn');
 const skipPermissionsBtn = document.getElementById('skipPermissionsBtn');
+const startBtn = document.getElementById('startBtn');
 
 /* ================== PONTOS ================== */
 const pontos = [
@@ -477,6 +479,41 @@ function skipPermissionsAndStart(){ localStorage.setItem(SKIPPED_PERMS_KEY,'1');
 menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } });
 grantPermissionsBtn.addEventListener('click', ()=> startPermissionsFlow());
 skipPermissionsBtn.addEventListener('click', ()=> skipPermissionsAndStart());
+startBtn.addEventListener("click", async () => {
+  try {
+    // 🔊 Desbloquear áudio no mobile
+    const audio = new Audio();
+    audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="; // som vazio
+    await audio.play().catch(() => {});
+
+    // 🎤 Falar texto (só desbloqueia depois do play)
+    const msg = new SpeechSynthesisUtterance("Bem-vindo. Sistema de transporte iniciado.");
+    speechSynthesis.speak(msg);
+
+    // 📍 Pedir permissão de localização
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => { console.log("GPS ativo:", pos.coords.latitude, pos.coords.longitude); },
+        err => { alert("Erro ao ativar GPS: " + err.message); },
+        { enableHighAccuracy: true }
+      );
+    }
+
+    // 🔔 Pedir permissão de notificação
+    if ("Notification" in window) {
+      const perm = await Notification.requestPermission();
+      if (perm === "granted") {
+        new Notification("✅ Sistema pronto para receber solicitações!");
+      }
+    }
+
+    // Esconde overlay e botão depois de iniciar
+    document.getElementById("startBtn").style.display = "none";
+    document.getElementById("desktopOverlay").style.display = "none";
+  } catch (e) {
+    alert("Erro ao iniciar: " + e);
+  }
+});
 
 /* ================== INIT ================== */
 if(localStorage.getItem(SKIPPED_PERMS_KEY) || Notification.permission === 'granted' || Notification.permission === 'denied'){
