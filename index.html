@@ -7,9 +7,12 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+
 <style>
-  :root{ --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb;}
+  :root{
+    --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.06);
+  }
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb; -webkit-font-smoothing:antialiased;}
   header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
   .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
   .title{color:var(--accent); font-weight:700; font-size:17px;}
@@ -26,24 +29,30 @@
   .btn-go{background:#00bfff;color:#000;}
   .btn-confirm{background:#ff3b30;color:#fff;}
   #menuToggle{position:fixed;top:8px;left:8px;z-index:10000;background:var(--accent);color:#000;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.4);}
+  #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.85); z-index:100003; align-items:center; justify-content:center; gap:10px; flex-direction:column;}
+  .card{background:rgba(255,255,255,0.03); padding:20px;border-radius:12px; color:#fff; width:340px; text-align:center;}
+  .card button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer;}
+  .card button.secondary{background:#444;color:#fff;margin-top:8px;}
   #arrow{position:fixed; right:12px; bottom:110px; z-index:100000; width:72px; height:72px; background:rgba(0,0,0,0.55); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.6); transform-origin:center center; transition:transform 0.25s linear;}
   #arrow svg{width:42px;height:42px; fill:var(--accent);}
   #statusBubble{position:fixed;right:12px;bottom:24px;z-index:100000;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:10px;color:#cfe;font-weight:700;font-size:13px;}
-  /* alert popup */
-  #newAlert{position:fixed; top:80px; right:12px; width:320px; background:#ff3b30; color:#fff; padding:12px 12px 10px 12px; border-radius:12px; font-weight:700; z-index:100001; display:none; box-shadow:0 12px 40px rgba(0,0,0,0.6);}
+  /* popup alerta novas marcações */
+  #newAlert{
+    position:fixed; top:80px; right:12px; width:340px; background:#ff3b30; color:#fff; padding:12px 14px; border-radius:12px; font-weight:700; z-index:100001; display:none; box-shadow:0 12px 40px rgba(0,0,0,0.6);
+  }
   #newAlert .msg{display:block; font-weight:800; margin-bottom:8px; animation: pulse 1s infinite;}
   @keyframes pulse { 0%{opacity:1}50%{opacity:0.6}100%{opacity:1} }
   .sliderWrap{height:40px; background:rgba(255,255,255,0.06); border-radius:8px; display:flex; align-items:center; position:relative; overflow:hidden; user-select:none;}
   .sliderText{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; pointer-events:none; color:#fff; font-weight:700; opacity:0.9;}
   .sliderHandle{width:44px; height:32px; background:#000; border-radius:8px; margin-left:4px; display:flex; align-items:center; justify-content:center; cursor:grab;}
   .sliderBar{flex:1; height:100%; display:flex; align-items:center; padding-right:8px; padding-left:64px;}
-  #newAlert button.simpleClose{ margin-left:8px; background:transparent; border:1px solid rgba(255,255,255,0.18); color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer;}
+  #newAlert button.simpleClose{ margin-left:8px;background:transparent;border:1px solid rgba(255,255,255,0.18); color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer;}
   #confirmBtn{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:100002;display:none;padding:10px 14px;border-radius:8px;border:none;background:#ff3b30;color:#fff;font-weight:800;cursor:pointer;}
-  /* overlay permissions */
-  #desktopOverlay{display:flex; position:fixed;inset:0; background:rgba(0,0,0,0.85); z-index:100003; align-items:center; justify-content:center; gap:10px; flex-direction:column;}
-  .card{background:rgba(255,255,255,0.03); padding:20px;border-radius:12px; color:#fff; width:320px; text-align:center;}
-  .card button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer;}
-  .card button.secondary{background:#444;color:#fff;margin-top:8px;}
+  /* small responsive tweaks */
+  @media(max-width:420px){
+    #menu{width:100%; left:-100%;}
+    #newAlert{left:12px; right:12px; width:auto;}
+  }
 </style>
 </head>
 <body>
@@ -56,11 +65,15 @@
 <button id="menuToggle" aria-label="Abrir menu">☰ Pontos</button>
 <div id="menu" aria-hidden="true"></div>
 
-<div id="app"><div id="map" role="application" aria-label="Mapa"></div></div>
+<div id="app">
+  <div id="map" role="application" aria-label="Mapa"></div>
+</div>
 
+<!-- arrow & status -->
 <div id="arrow" title="Direção" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 L3 21 L12 17 L21 21 Z"></path></svg></div>
 <div id="statusBubble">Aguardando</div>
 
+<!-- popup novo agendamento -->
 <div id="newAlert">
   <span class="msg" id="alertText"></span>
   <div class="sliderWrap" id="sliderWrap" style="margin-bottom:8px">
@@ -74,6 +87,7 @@
 
 <button id="confirmBtn" class="btn-confirm">Confirmar embarque</button>
 
+<!-- overlay inicial pede permissões -->
 <div id="desktopOverlay" aria-hidden="false">
   <div class="card">
     <h2 style="color:#00ffd5;margin:0 0 8px">Permissões</h2>
@@ -93,19 +107,21 @@ const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
 const RANGE = "A:E";
 const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
-const POLL_INTERVAL_MS = 15000;
-const ULT_KEY = 'ultimaAtualizacao_v1';
+const POLL_INTERVAL_MS = 12000; // intervalo de checagem da planilha
+const ULT_KEY = 'ultimaAtualizacao_v2';
 const EMBARCADOS_KEY = 'embarcados_v3';
+const SEEN_KEY = 'seen_requests_v1';
 const SKIPPED_PERMS_KEY = 'skip_perms_v1';
 
 /* ================== ESTADO ================== */
 let allData = [], filteredData = [];
 let embarcados = JSON.parse(localStorage.getItem(EMBARCADOS_KEY) || '[]');
 let ultimaAtualizacao = Number(localStorage.getItem(ULT_KEY) || '0');
+let seenRequests = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'));
 let newAlerts = [];
 
-let map, driverMarker = null, routeControl = null, currentDest = null, destMarker = null;
-let watchId = null;
+let map, driverMarker=null, routeControl=null, currentDest=null, destMarker=null;
+let watchId = null, initialLoaded=false;
 
 /* ================== DOM ================== */
 const menu = document.getElementById('menu');
@@ -169,14 +185,14 @@ function parseSheetDateTime(val){
   }
   const dt = new Date(val); return isNaN(dt)?null:dt;
 }
-function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}`; }
+function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}___${(row[3]||'')}`; } // keep extra columns if present
 
 /* ================== MAP INIT ================== */
 map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
 
-/* ================== CAR ICON (aerial) ================== */
-const carIconUrl = 'https://cdn-icons-png.flaticon.com/512/743/743922.png';
+/* ================== CAR ICON (aerial car) ================== */
+const carIconUrl = 'carro.png'; // aerial car icon
 const carIcon = L.icon({ iconUrl: carIconUrl, iconSize:[48,48], iconAnchor:[24,24] });
 
 function rotateMarkerIcon(marker, angleDegrees){
@@ -185,7 +201,7 @@ function rotateMarkerIcon(marker, angleDegrees){
   marker._icon.style.transition = 'transform 0.2s linear';
 }
 
-/* ================== AUDIO / VOICE / ALERT ================== */
+/* ================== AUDIO & VOICE ========== */
 let beepInterval = null;
 const audioCtx = (window.AudioContext||window.webkitAudioContext) ? new (window.AudioContext||window.webkitAudioContext)() : null;
 
@@ -210,16 +226,15 @@ function speak(text){
   }
 }
 
-/* ================== ALERT UI / SLIDER ================== */
+/* ================== ALERTA NOVA SOLICITAÇÃO (UI) ========== */
 let dragging=false, startX=0, handleMax=0;
-function openNewAlert(msg){
-  newAlerts.push(msg);
-  alertText.textContent = newAlerts.length===1 ? msg : `${newAlerts.length} novas marcações`;
+function openNewAlert(message){
+  newAlerts.push(message);
+  alertText.textContent = newAlerts.length === 1 ? message : `${newAlerts.length} novas marcações`;
   newAlertEl.style.display = 'block';
   startAlertBeep();
   speak('Nova solicitação de transporte');
-  notifyNative('Nova marcação', msg.replace(/^Novo agendamento:\s*/, ''));
-  // reset slider
+  notifyNative('Nova marcação', message.replace(/^Novo agendamento:\s*/, ''));
   sliderHandle.style.transform = 'translateX(0px)';
   setTimeout(()=>{ handleMax = sliderWrap.clientWidth - sliderHandle.clientWidth - 8; }, 120);
 }
@@ -230,7 +245,7 @@ function clearNewAlerts(){
   stopAlertBeep();
 }
 
-/* slider handlers */
+/* slider events */
 sliderHandle.addEventListener('pointerdown', (e)=>{
   dragging=true; startX = e.clientX; sliderHandle.setPointerCapture(e.pointerId); sliderHandle.style.cursor='grabbing';
 });
@@ -253,7 +268,7 @@ window.addEventListener('pointerup', (e)=>{
 });
 simpleCloseBtn.addEventListener('click', ()=> clearNewAlerts());
 
-/* ================== NOTIFICAÇÕES NATIVAS (apenas se granted/default) ================== */
+/* ================== NOTIFICAÇÕES NATIVAS ========== */
 async function requestNotificationPermissionOnce(){
   if(!('Notification' in window)) return false;
   if(Notification.permission === 'default' && !localStorage.getItem(SKIPPED_PERMS_KEY)){
@@ -268,56 +283,62 @@ async function notifyNative(title, body){
   }
 }
 
-/* ================== CARREGAR MARCAÇÕES ================== */
-let initialLoaded = false;
+/* ================== CARREGAR MARCAÇÕES (Sheets) ========== */
 async function loadBookings(initial=false){
   try{
     const res = await fetch(SHEETS_URL);
     const json = await res.json();
-    if(!json || !json.values || json.values.length <= 1){
-      allData = []; filteredData = []; renderMenu(filteredData); return;
-    }
+    if(!json || !json.values || json.values.length <= 1){ allData=[]; filteredData=[]; renderMenu(filteredData); return; }
     const rows = json.values.slice(1);
     const today = todayYMD();
-    let maxTs = ultimaAtualizacao || 0;
+    let maxTimestamp = ultimaAtualizacao || 0;
+
+    // Build list of bookings matching criteria (today and >= 19:00 and not embarcados)
     const kept = rows.filter(r=>{
       const dt = parseSheetDateTime(r[0]);
       if(!dt) return false;
-      const rowY = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
-      if(rowY !== today) return false;
+      const rowYMD = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+      if(rowYMD !== today) return false;
       if(dt.getHours() < 19) return false;
       const key = bookingKey(r);
       if(embarcados.includes(key)) return false;
-      if(dt.getTime() > maxTs) maxTs = dt.getTime();
+      if(dt.getTime() > maxTimestamp) maxTimestamp = dt.getTime();
       return true;
     });
 
-    // detectar novas entradas (somente após inicialização)
+    // Detect new rows: compare by a "seenRequests" set (persisted)
     if(initialLoaded){
-      const novas = kept.filter(r=>{
-        const dt = parseSheetDateTime(r[0]);
-        return dt && dt.getTime() > ultimaAtualizacao;
-      });
-      if(novas.length){
-        // notificar cada nova - acumula em newAlerts
-        novas.forEach(n=>{
-          const solicitante = n[1]||'';
-          const ponto = n[2]||'';
+      kept.forEach(row => {
+        const key = bookingKey(row);
+        if(!seenRequests.has(key)){
+          seenRequests.add(key);
+          // persist immediately to avoid duplicate triggers
+          try{ localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seenRequests))); }catch(e){}
+          // notify user for every new row (even duplicates of same name)
+          const solicitante = row[1] || '';
+          const ponto = row[2] || '';
           openNewAlert(`Novo agendamento: ${solicitante} - ${ponto}`);
-        });
-      }
+        }
+      });
+    } else {
+      // First load: mark all existing as seen but do not notify
+      kept.forEach(row => {
+        const key = bookingKey(row);
+        if(!seenRequests.has(key)) seenRequests.add(key);
+      });
+      try{ localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seenRequests))); }catch(e){}
     }
 
     allData = kept;
     filteredData = allData.slice();
     renderMenu(filteredData);
 
-    // atualiza ultimaAtualizacao para maior timestamp conhecido
-    ultimaAtualizacao = maxTs > 0 ? maxTs : ultimaAtualizacao;
+    ultimaAtualizacao = maxTimestamp > 0 ? maxTimestamp : ultimaAtualizacao;
     localStorage.setItem(ULT_KEY, String(ultimaAtualizacao || 0));
     initialLoaded = true;
+
   }catch(e){
-    console.error('Erro ao buscar planilha', e);
+    console.error('Erro ao carregar planilha', e);
   }
 }
 
@@ -325,7 +346,9 @@ async function loadBookings(initial=false){
 function renderMenu(rows){
   menu.innerHTML = '';
   if(!rows || rows.length === 0){
-    const no = document.createElement('div'); no.style.padding='12px'; no.style.color='#cfe'; no.textContent = 'Nenhum agendamento disponível (apenas reservas ≥ 19:00).'; menu.appendChild(no); return;
+    const no = document.createElement('div'); no.style.padding='12px'; no.style.color='#cfe';
+    no.textContent='Nenhum agendamento disponível (apenas reservas ≥ 19:00).';
+    menu.appendChild(no); return;
   }
   rows.forEach(r=>{
     const dt = parseSheetDateTime(r[0]);
@@ -338,16 +361,17 @@ function renderMenu(rows){
   });
 }
 
-/* ================== NAVEGAÇÃO / ROTA ========== */
+/* ================== NAVEGAÇÃO (rota pelas ruas com OSRM) ========== */
 function startNavigationTo(row){
-  const nome = (row[2]||'').trim().toLowerCase();
-  currentDest = pontos.find(p=>p.nome.toLowerCase() === nome);
-  if(!currentDest){ alert('Ponto não encontrado no mapa: ' + row[2]); return; }
+  const nomePonto = (row[2]||'').trim().toLowerCase();
+  currentDest = pontos.find(p=>p.nome.toLowerCase() === nomePonto);
+  if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
 
   speak(`Indo para ${currentDest.nome}`);
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
   menu.classList.remove('open');
 
+  // limpar rota anterior
   if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl = null; }
   if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker = null; }
 
@@ -370,13 +394,16 @@ function startNavigationTo(row){
   }
 }
 
-/* ================== GEO REALTIME ========== */
-function bearingBetween(from,to){
-  const lat1 = from[0]*Math.PI/180, lon1 = from[1]*Math.PI/180;
-  const lat2 = to[0]*Math.PI/180, lon2 = to[1]*Math.PI/180;
-  const y = Math.sin(lon2-lon1)*Math.cos(lat2);
-  const x = Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
-  return (Math.atan2(y,x)*180/Math.PI + 360) % 360;
+/* ================== GEOLOCALIZAÇÃO (real-time) ========== */
+function bearingBetween(a,b){
+  const toRad = Math.PI/180, toDeg = 180/Math.PI;
+  const lat1 = a[0]*toRad, lat2 = b[0]*toRad;
+  const dLon = (b[1]-a[1])*toRad;
+  const y = Math.sin(dLon)*Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+  let brng = Math.atan2(y,x)*toDeg;
+  brng = (brng + 360) % 360;
+  return brng;
 }
 
 function checkArrival(lat,lng){
@@ -386,60 +413,58 @@ function checkArrival(lat,lng){
     statusBubble.textContent = `Chegou em ${currentDest.nome}`;
     confirmBtn.style.display = 'block';
     confirmBtn.onclick = ()=>{
+      // mark the first matching booking as embarcado (we identify by bookingKey)
       const row = filteredData.find(r=> (r[2]||'').trim().toLowerCase() === (currentDest.nome||'').trim().toLowerCase());
       if(row){
-        embarcados.push(bookingKey(row));
+        const key = bookingKey(row);
+        if(!embarcados.includes(key)) embarcados.push(key);
         localStorage.setItem(EMBARCADOS_KEY, JSON.stringify(embarcados));
+        // Also remove from seenRequests so future identical new rows still trigger
+        // (do NOT remove persisted seenRequests for this key because it's the one we completed)
       }
       if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl=null; }
       if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker=null; }
       currentDest = null;
-      confirmBtn.style.display = 'none';
-      loadBookings(true);
+      confirmBtn.style.display='none';
+      loadBookings(true); // refresh list
       clearNewAlerts();
-      statusBubble.textContent = 'Aguardando';
+      statusBubble.textContent='Aguardando';
     };
   } else {
-    confirmBtn.style.display = 'none';
+    confirmBtn.style.display='none';
   }
 }
 
 function onGeoSuccess(pos){
   const lat = pos.coords.latitude, lng = pos.coords.longitude;
   if(!driverMarker){
-    driverMarker = L.marker([lat,lng], { icon: carIcon }).addTo(map);
+    driverMarker = L.marker([lat,lng], {icon: carIcon}).addTo(map);
     map.setView([lat,lng], 16);
   } else {
     driverMarker.setLatLng([lat,lng]);
   }
-
   if(currentDest){
     const brng = bearingBetween([lat,lng], currentDest.coords);
     rotateMarkerIcon(driverMarker, brng);
     arrowEl.style.transform = `rotate(${brng}deg)`;
-    // atualizar rota (o L.Routing tem métodos diferentes em versões)
+    // update route first waypoint to current location
     try{
       if(routeControl && typeof routeControl.spliceWaypoints === 'function'){
-        routeControl.spliceWaypoints(0,1, L.latLng(lat,lng) );
+        routeControl.spliceWaypoints(0,1,L.latLng(lat,lng));
       } else if(routeControl && typeof routeControl.setWaypoints === 'function'){
         const wps = routeControl.getWaypoints ? routeControl.getWaypoints() : null;
         if(wps && wps.length >= 2){
           routeControl.setWaypoints([ L.latLng(lat,lng), wps[wps.length-1].latLng || L.latLng(currentDest.coords[0], currentDest.coords[1]) ]);
         }
       }
-    }catch(e){
-      // ignore; rota ainda estará visível
-    }
+    }catch(e){ /* ignore */ }
     const dist = map.distance([lat,lng], currentDest.coords);
     statusBubble.textContent = `Distância: ${Math.round(dist)} m`;
     checkArrival(lat,lng);
   }
 }
 
-function onGeoError(err){
-  console.warn('Geolocation error', err);
-  statusBubble.textContent = 'GPS indisponível';
-}
+function onGeoError(err){ console.warn('Geolocation error', err); statusBubble.textContent='GPS indisponível'; }
 
 function startGeoWatch(){
   if('geolocation' in navigator && !watchId){
@@ -447,45 +472,43 @@ function startGeoWatch(){
   }
 }
 
-/* ================== PERMISSÕES & INICIALIZAÇÃO ================== */
+/* ================== PERMISSÕES E INÍCIO ================== */
 async function startPermissionsFlow(){
-  // resume audio context on user gesture (some browsers need this)
   try{ await audioCtx.resume(); }catch(e){}
-  // pedir notificação se default
+  // request notification only once when default
   if(Notification.permission === 'default' && !localStorage.getItem(SKIPPED_PERMS_KEY)){
-    try{ await Notification.requestPermission(); }catch(e){ /* ignore */ }
+    try{ await Notification.requestPermission(); }catch(e){}
   }
-  // pedir geolocation prompt
   if('geolocation' in navigator){
     navigator.geolocation.getCurrentPosition((p)=>{ startGeoWatch(); }, (err)=>{ startGeoWatch(); }, { enableHighAccuracy:true, timeout:10000 });
   } else startGeoWatch();
-  desktopOverlay.style.display = 'none';
+  desktopOverlay.style.display='none';
 }
-function skipPermissionsAndStart(){
-  localStorage.setItem(SKIPPED_PERMS_KEY, '1');
-  startGeoWatch();
-  desktopOverlay.style.display = 'none';
-}
+function skipPermissionsAndStart(){ localStorage.setItem(SKIPPED_PERMS_KEY,'1'); startGeoWatch(); desktopOverlay.style.display='none'; }
 
-menuToggle.addEventListener('click', ()=> menu.classList.toggle('open'));
+menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('Notification' in window && Notification.permission==='default'){ Notification.requestPermission().catch(()=>{}); } });
 grantPermissionsBtn.addEventListener('click', ()=> startPermissionsFlow());
 skipPermissionsBtn.addEventListener('click', ()=> skipPermissionsAndStart());
-simpleCloseBtn.addEventListener('click', ()=> clearNewAlerts());
 
-/* ================== START ================== */
-// show overlay only if not skipped and permission still default (so user can grant)
+/* ================== INICIALIZAÇÃO ================== */
+// Show overlay only when not skipped and permission is default (so user can grant)
 if(localStorage.getItem(SKIPPED_PERMS_KEY) || Notification.permission === 'granted' || Notification.permission === 'denied'){
-  // if already granted or explicitly skipped, hide overlay
-  desktopOverlay.style.display = 'none';
-  // but still start watch if possible
+  desktopOverlay.style.display='none';
   startGeoWatch();
 } else {
-  desktopOverlay.style.display = 'flex';
+  desktopOverlay.style.display='flex';
 }
 
+// initial load and poll
 loadBookings(true);
 setInterval(()=> loadBookings(false), POLL_INTERVAL_MS);
 
+/* Expose some helpers for debug (optional) */
+window.__driverApp = {
+  loadBookings, startGeoWatch, seenRequests,
+  embarcados, clearNewAlerts
+};
 </script>
+
 </body>
 </html>
