@@ -41,6 +41,7 @@
     position:fixed; top:80px; right:12px; background:#ff3b30; color:#fff; padding:12px 16px; border-radius:12px; font-weight:700; z-index:100001; display:none;
   }
   #newAlert button{margin-left:12px;background:#000;color:#fff;border:none;padding:4px 8px;border-radius:6px; cursor:pointer;}
+  #confirmBtn{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:100002;}
 </style>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -64,7 +65,6 @@
 <div id="statusBubble">Aguardando</div>
 
 <div id="newAlert"><span id="alertText"></span><button onclick="closeAlert()">Fechar</button></div>
-
 <div id="desktopOverlay" aria-hidden="true">
   <div class="card">
     <h2 style="color:#00ffd5;margin:0 0 8px">Abra no celular</h2>
@@ -74,7 +74,6 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
-<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 
 <script>
 /* ================== CONFIG ================== */
@@ -204,7 +203,6 @@ function rotateMarkerIcon(marker, angleDegrees){
 /* ================== ALERTA SONORO ================== */
 let beepInterval = null;
 const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
-
 function playBeepOnce(){
   if(!audioCtx) return;
   const o = audioCtx.createOscillator();
@@ -219,13 +217,11 @@ function playBeepOnce(){
   g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.45);
   setTimeout(()=>{ o.stop(); }, 500);
 }
-
 function startAlertBeep(){
   if(beepInterval) return; 
   playBeepOnce(); 
   beepInterval = setInterval(playBeepOnce, 1000); 
 }
-
 function stopAlertBeep(){
   if(beepInterval){
     clearInterval(beepInterval);
@@ -239,13 +235,10 @@ function showAlert(message){
   newAlert.style.display = 'block';
   startAlertBeep(); 
 }
-
 function closeAlert(){
   newAlert.style.display='none';
   stopAlertBeep(); 
 }
-
-/* ================== NOTIFICAR NOVAS MARCAÇÕES ================== */
 async function notifyNewBooking(message){
   showAlert(message);
   if(driverMarker){
@@ -303,6 +296,14 @@ setInterval(loadBookings, POLL_INTERVAL_MS);
 function startNavigationTo(row){
   currentDest = pontos.find(p=>p.nome.toLowerCase() === (row[2]||'').trim().toLowerCase());
   if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
+
+  // Fala o ponto em voz alta
+  if('speechSynthesis' in window){
+    const utter = new SpeechSynthesisUtterance(`Indo para ${currentDest.nome}`);
+    utter.lang = 'pt-BR';
+    window.speechSynthesis.speak(utter);
+  }
+
   if(driverMarker) map.panTo(driverMarker.getLatLng());
   else map.panTo(currentDest.coords);
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
@@ -327,6 +328,40 @@ function startNavigationTo(row){
 }
 
 /* ================== GEOLOCALIZAÇÃO ================== */
+function bearingBetween(from, to){
+  const lat1 = from[0]*Math.PI/180, lon1 = from[1]*Math.PI/180;
+  const lat2 = to[0]*Math.PI/180, lon2 = to[1]*Math.PI/180;
+  const y = Math.sin(lon2-lon1)*Math.cos(lat2);
+  const x = Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(lon2-lon1);
+  return (Math.atan2(y,x)*180/Math.PI+360)%360;
+}
+
+function checkArrival(lat, lng){
+  if(!currentDest) return;
+  const distance = map.distance([lat,lng], currentDest.coords);
+  if(distance < 30){ // chegou
+    statusBubble.textContent = `Chegou em ${currentDest.nome}`;
+    if(!document.getElementById('confirmBtn')){
+      const btn = document.createElement('button');
+      btn.id = 'confirmBtn';
+      btn.className = 'btn btn-confirm';
+      btn.textContent = 'Confirmar embarque';
+      btn.onclick = ()=>{
+        const row = filteredData.find(r=>r[2]===currentDest.nome);
+        if(row){
+          embarcados.push(bookingKey(row));
+          localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
+        }
+        loadBookings(true);
+        currentDest = null;
+        statusBubble.textContent = 'Aguardando';
+        btn.remove();
+      };
+      document.body.appendChild(btn);
+    }
+  }
+}
+
 function onGeoSuccess(pos){
   const lat=pos.coords.latitude, lng=pos.coords.longitude;
   if(!driverMarker){
@@ -340,6 +375,7 @@ function onGeoSuccess(pos){
     rotateMarkerIcon(driverMarker, brng);
     arrowEl.style.transform = `rotate(${brng}deg)`;
     if(routeControl) routeControl.spliceWaypoints(0,1,L.latLng(lat,lng));
+    checkArrival(lat,lng);
   }
 }
 function onGeoError(err){ console.error('Geolocation error', err); statusBubble.textContent='GPS indisponível'; }
@@ -347,25 +383,6 @@ if('geolocation' in navigator){
   watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {enableHighAccuracy:true, maximumAge:1000});
 } else { statusBubble.textContent='Sem suporte a GPS'; }
 
-/* ============== EMBARCAR / CONFIRMAR ============== */
-map.on('popupopen', e=>{
-  const node = e.popup._contentNode;
-  if(node && node.querySelector('.btn-confirm')){
-    node.querySelector('.btn-confirm').addEventListener('click', ()=>{
-      const rowKey = node.querySelector('.btn-confirm').dataset.key;
-      embarcados.push(decodeURIComponent(rowKey));
-      localStorage.setItem('embarcados_v3', JSON.stringify(embarcados));
-      loadBookings(true);
-      map.closePopup();
-      currentDest = null;
-      if(routeControl) map.removeControl(routeControl);
-      statusBubble.textContent='Aguardando';
-      closeAlert();
-    });
-  }
-});
 </script>
-
 </body>
 </html>
-
