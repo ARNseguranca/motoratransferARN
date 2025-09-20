@@ -190,7 +190,7 @@ map = L.map('map', { zoomControl: false, attributionControl:false }).setView([-1
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
 /* ============ CAR ICON ============ */
-const carIconUrl = 'carro.png';
+const carIconUrl = 'https://cdn-icons-png.flaticon.com/512/743/743922.png';
 const carIcon = L.icon({ iconUrl: carIconUrl, iconSize:[48,48], iconAnchor:[24,24] });
 
 function rotateMarkerIcon(marker, angleDegrees){
@@ -357,7 +357,9 @@ function renderMenu(rows){
 }
 
 /* ================== NAVIGATION (OSRM routing) ========== */
+// Função para iniciar navegação tipo Waze ao clicar em "Ir"
 function startNavigationTo(row){
+  // Pega o destino
   const nomePonto = (row[2]||'').trim().toLowerCase();
   currentDest = pontos.find(p=>p.nome.toLowerCase() === nomePonto);
   if(!currentDest){ alert('Ponto não encontrado no mapa: '+row[2]); return; }
@@ -366,66 +368,84 @@ function startNavigationTo(row){
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
   menu.classList.remove('open');
 
-  if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl = null; }
-  if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker = null; }
+  // Pega localização atual antes de iniciar rota
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
 
-  destMarker = L.marker(currentDest.coords).addTo(map).bindPopup(`<b>${currentDest.nome}</b>`);
+      // Remove rotas e marcadores anteriores
+      if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl = null; }
+      if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker = null; }
 
-  if(driverMarker){
-    const from = driverMarker.getLatLng();
-    const to = L.latLng(currentDest.coords[0], currentDest.coords[1]);
-    routeControl = L.Routing.control({
-      waypoints: [ from, to ],
-      routeWhileDragging:false,
-      show:false,
-      addWaypoints:false,
-      createMarker: ()=>null,
-      lineOptions:{ styles:[{color:'cyan', weight:5}] },
-      router: L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' })
-    }).addTo(map);
-  } else {
-    map.panTo(currentDest.coords);
-  }
-}
+      destMarker = L.marker(currentDest.coords).addTo(map).bindPopup(`<b>${currentDest.nome}</b>`);
 
-/* ================== GEO & ARRIVAL ========== */
-function bearingBetween(a,b){
-  const toRad = Math.PI/180, toDeg = 180/Math.PI;
-  const lat1 = a[0]*toRad, lat2 = b[0]*toRad;
-  const dLon = (b[1]-a[1])*toRad;
-  const y = Math.sin(dLon)*Math.cos(lat2);
-  const x = Math.cos(lat1)*Math.sin(lat2) - Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-  let brng = Math.atan2(y,x)*toDeg;
-  brng = (brng + 360) % 360;
-  return brng;
-}
-
-function checkArrival(lat,lng){
-  if(!currentDest) return;
-  const dist = map.distance([lat,lng], currentDest.coords);
-  if(dist <= 30){
-    statusBubble.textContent = `Chegou em ${currentDest.nome}`;
-    confirmBtn.style.display = 'block';
-    confirmBtn.onclick = ()=>{
-      const row = filteredData.find(r=> (r[2]||'').trim().toLowerCase() === (currentDest.nome||'').trim().toLowerCase());
-      if(row){
-        const key = bookingKey(row);
-        if(!embarcados.includes(key)) embarcados.push(key);
-        localStorage.setItem(EMBARCADOS_KEY, JSON.stringify(embarcados));
+      // Cria marcador do motorista se não existir
+      if(!driverMarker){
+        driverMarker = L.marker([lat,lng], {icon: carIcon}).addTo(map);
+        map.setView([lat,lng], 16);
+      } else {
+        driverMarker.setLatLng([lat,lng]);
       }
-      if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl=null; }
-      if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker=null; }
-      currentDest = null;
-      confirmBtn.style.display='none';
-      loadBookings(true);
-      clearNewAlerts();
-      statusBubble.textContent='Aguardando';
-    };
+
+      // Inicia rota do ponto atual até o destino
+      routeControl = L.Routing.control({
+        waypoints: [ L.latLng(lat,lng), L.latLng(currentDest.coords[0], currentDest.coords[1]) ],
+        routeWhileDragging:false,
+        show:false,
+        addWaypoints:false,
+        createMarker: ()=>null,
+        lineOptions:{ styles:[{color:'cyan', weight:5}] },
+        router: L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' })
+      }).addTo(map);
+
+      // Inicia acompanhamento contínuo do motorista
+      startGeoWatch();
+    }, function(err){
+      alert("Erro ao obter localização: " + err.message);
+    }, { enableHighAccuracy: true });
   } else {
-    confirmBtn.style.display='none';
+    alert("Geolocalização não suportada");
   }
 }
 
+// Fala instruções de navegação tipo Waze
+let lastInstructionIndex = -1;
+function speakRouteInstructions() {
+  if (!routeControl) return;
+  const route = routeControl._routes && routeControl._routes[0];
+  if (!route || !route.instructions) return;
+
+  const latlng = driverMarker.getLatLng();
+  let closestIdx = -1, minDist = Infinity;
+  route.instructions.forEach((inst, idx) => {
+    if (inst.latLng) {
+      const dist = latlng.distanceTo(inst.latLng);
+      if (dist < minDist) {
+        minDist = dist;
+        closestIdx = idx;
+      }
+    }
+  });
+
+  // Só fala se mudou de instrução e está próximo
+  if (closestIdx !== -1 && closestIdx !== lastInstructionIndex && minDist < 80) {
+    lastInstructionIndex = closestIdx;
+    let texto = route.instructions[closestIdx].text;
+    // Traduz instruções comuns para português
+    texto = texto.replace(/Turn right/i, "Vire à direita")
+                 .replace(/Turn left/i, "Vire à esquerda")
+                 .replace(/Continue/i, "Continue em frente")
+                 .replace(/Destination/i, "Seu destino está à esquerda")
+                 .replace(/Arrive at destination/i, "Você chegou ao destino");
+    // Adiciona nome da rua se disponível
+    if (route.instructions[closestIdx].road) {
+      texto += ` na rua ${route.instructions[closestIdx].road}`;
+    }
+    speak(texto);
+  }
+}
+
+// Atualiza posição do motorista e fala instruções
 function onGeoSuccess(pos){
   const lat = pos.coords.latitude, lng = pos.coords.longitude;
   if(!driverMarker){
@@ -438,7 +458,7 @@ function onGeoSuccess(pos){
     const brng = bearingBetween([lat,lng], currentDest.coords);
     rotateMarkerIcon(driverMarker, brng);
     arrowEl.style.transform = `rotate(${brng}deg)`;
-    // update route first waypoint to current location
+    // Atualiza rota
     try{
       if(routeControl && typeof routeControl.spliceWaypoints === 'function'){
         routeControl.spliceWaypoints(0,1,L.latLng(lat,lng));
@@ -451,6 +471,10 @@ function onGeoSuccess(pos){
     }catch(e){}
     const dist = map.distance([lat,lng], currentDest.coords);
     statusBubble.textContent = `Distância: ${Math.round(dist)} m`;
+
+    // Fala instruções de navegação tipo Waze
+    speakRouteInstructions();
+
     checkArrival(lat,lng);
   }
 }
@@ -459,7 +483,11 @@ function onGeoError(err){ console.warn('Geolocation error', err); statusBubble.t
 
 function startGeoWatch(){
   if('geolocation' in navigator && !watchId){
-    watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, { enableHighAccuracy:true, maximumAge:0, timeout:10000 });
+    watchId = navigator.geolocation.watchPosition(onGeoSuccess, onGeoError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 10000
+    });
   }
 }
 
