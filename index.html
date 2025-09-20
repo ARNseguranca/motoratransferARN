@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-<title>Coleta Transfer Inauguração - Driver</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#05060a">
+<title>Coleta Transfer Inauguração - Driver (Mobile)</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
@@ -11,47 +13,45 @@
 <style>
   :root{
     --bg1:#05060a; --bg2:#0f1224; --accent:#00ffd5; --muted:rgba(255,255,255,0.06);
+    --touch:18px;
   }
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb; -webkit-font-smoothing:antialiased;}
+  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg1),var(--bg2)); color:#eafffb; -webkit-font-smoothing:antialiased; -webkit-touch-callout:none; -webkit-user-select:none;}
   header{height:56px; position:fixed; left:0; right:0; top:0; z-index:9999; display:flex; align-items:center; gap:12px; padding:8px 12px; background:linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-bottom:1px solid rgba(255,255,255,0.02);}
   .logo{width:36px;height:36px;border-radius:8px;background:#fff;}
   .title{color:var(--accent); font-weight:700; font-size:17px;}
   #app{padding-top:56px; height:100vh; display:flex; overflow:hidden;}
-  #map{flex:1; height:100%; min-height:200px;}
-  #menu{position:fixed; left:-320px; top:56px; width:320px; height:calc(100% - 56px); background:rgba(0,0,0,0.92); overflow:auto; transition:0.28s; z-index:9999; padding:12px; box-sizing:border-box;}
+  #map{flex:1; height:100%; min-height:200px; touch-action: none;}
+  #menu{position:fixed; left:-100%; top:56px; width:92%; max-width:360px; height:calc(100% - 56px); background:rgba(0,0,0,0.95); overflow:auto; transition:0.28s; z-index:9999; padding:12px; box-sizing:border-box; border-top-right-radius:12px; border-bottom-right-radius:12px;}
   #menu.open{left:0;}
-  .item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px; border-radius:10px; margin-bottom:8px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
+  .item{display:flex; justify-content:space-between; align-items:center; gap:8px; padding:12px; border-radius:12px; margin-bottom:10px; background:linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));}
   .meta{display:flex;flex-direction:column;}
-  .hour{color:var(--accent); font-weight:900; font-size:14px;}
-  .point{color:#dff; font-size:14px; margin-top:4px;}
-  .name{color:#cfe; font-size:12px;}
-  .btn{background:var(--accent); color:#000; border:none; padding:8px 12px; border-radius:10px; font-weight:800; cursor:pointer;}
+  .hour{color:var(--accent); font-weight:900; font-size:16px;}
+  .point{color:#dff; font-size:16px; margin-top:6px;}
+  .name{color:#cfe; font-size:14px;}
+  .btn{background:var(--accent); color:#000; border:none; padding:12px 16px; border-radius:12px; font-weight:800; cursor:pointer; font-size:16px;}
   .btn-go{background:#00bfff;color:#000;}
-  .btn-confirm{background:#ff3b30;color:#fff;}
-  #menuToggle{position:fixed;top:8px;left:8px;z-index:10000;background:var(--accent);color:#000;padding:8px 12px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.4);}
-  #desktopOverlay{display:none; position:fixed;inset:0; background:rgba(0,0,0,0.85); z-index:100003; align-items:center; justify-content:center; gap:10px; flex-direction:column;}
-  .card{background:rgba(255,255,255,0.03); padding:20px;border-radius:12px; color:#fff; width:340px; text-align:center;}
-  .card button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:var(--accent);color:#000;font-weight:800;cursor:pointer;}
-  .card button.secondary{background:#444;color:#fff;margin-top:8px;}
-  #arrow{position:fixed; right:12px; bottom:110px; z-index:100000; width:72px; height:72px; background:rgba(0,0,0,0.55); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.6); transform-origin:center center; transition:transform 0.25s linear;}
-  #arrow svg{width:42px;height:42px; fill:var(--accent);}
-  #statusBubble{position:fixed;right:12px;bottom:24px;z-index:100000;background:rgba(0,0,0,0.6);padding:8px 12px;border-radius:10px;color:#cfe;font-weight:700;font-size:13px;}
-  /* popup alerta novas marcações */
-  #newAlert{
-    position:fixed; top:80px; right:12px; width:340px; background:#ff3b30; color:#fff; padding:12px 14px; border-radius:12px; font-weight:700; z-index:100001; display:none; box-shadow:0 12px 40px rgba(0,0,0,0.6);
-  }
-  #newAlert .msg{display:block; font-weight:800; margin-bottom:8px; animation: pulse 1s infinite;}
+  .btn-confirm{background:#ff3b30;color:#fff; padding:12px 18px;}
+  #menuToggle{position:fixed;top:10px;left:10px;z-index:10000;background:var(--accent);color:#000;padding:10px 14px;border:none;border-radius:12px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,0.4); font-weight:900;}
+  #arrow{position:fixed; right:12px; bottom:110px; z-index:100000; width:64px; height:64px; background:rgba(0,0,0,0.55); border-radius:12px; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 30px rgba(0,0,0,0.6); transform-origin:center center; transition:transform 0.25s linear;}
+  #arrow svg{width:34px;height:34px; fill:var(--accent);}
+  #statusBubble{position:fixed;right:12px;bottom:24px;z-index:100000;background:rgba(0,0,0,0.6);padding:10px 14px;border-radius:12px;color:#cfe;font-weight:800;font-size:15px;}
+  #newAlert{position:fixed; top:88px; right:8px; left:8px; max-width:420px; margin:auto;background:#ff3b30; color:#fff; padding:14px 14px; border-radius:12px; font-weight:800; z-index:100001; display:none; box-shadow:0 12px 40px rgba(0,0,0,0.6);}
+  #newAlert .msg{display:block; margin-bottom:10px; font-size:16px; animation:pulse 1s infinite;}
   @keyframes pulse { 0%{opacity:1}50%{opacity:0.6}100%{opacity:1} }
-  .sliderWrap{height:40px; background:rgba(255,255,255,0.06); border-radius:8px; display:flex; align-items:center; position:relative; overflow:hidden; user-select:none;}
-  .sliderText{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; pointer-events:none; color:#fff; font-weight:700; opacity:0.9;}
-  .sliderHandle{width:44px; height:32px; background:#000; border-radius:8px; margin-left:4px; display:flex; align-items:center; justify-content:center; cursor:grab;}
-  .sliderBar{flex:1; height:100%; display:flex; align-items:center; padding-right:8px; padding-left:64px;}
-  #newAlert button.simpleClose{ margin-left:8px;background:transparent;border:1px solid rgba(255,255,255,0.18); color:#fff; padding:6px 8px; border-radius:8px; cursor:pointer;}
-  #confirmBtn{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:100002;display:none;padding:10px 14px;border-radius:8px;border:none;background:#ff3b30;color:#fff;font-weight:800;cursor:pointer;}
-  /* small responsive tweaks */
-  @media(max-width:420px){
-    #menu{width:100%; left:-100%;}
-    #newAlert{left:12px; right:12px; width:auto;}
+  .sliderWrap{height:44px; background:rgba(255,255,255,0.06); border-radius:10px; display:flex; align-items:center; position:relative; overflow:hidden; user-select:none;}
+  .sliderText{position:absolute; left:12px; top:0; bottom:0; display:flex; align-items:center; pointer-events:none; color:#fff; font-weight:800; font-size:15px;}
+  .sliderHandle{width:48px; height:36px; background:#000; border-radius:10px; margin-left:6px; display:flex; align-items:center; justify-content:center; cursor:grab; font-weight:900;}
+  .sliderBar{flex:1; height:100%; display:flex; align-items:center; padding-right:8px; padding-left:72px;}
+  #newAlert button.simpleClose{ margin-left:8px;background:transparent;border:1px solid rgba(255,255,255,0.18); color:#fff; padding:8px 10px; border-radius:8px; cursor:pointer;}
+  #confirmBtn{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);z-index:100002;display:none;padding:12px 18px;border-radius:12px;border:none;background:#ff3b30;color:#fff;font-weight:900;cursor:pointer;font-size:16px;}
+  #desktopOverlay{display:flex; position:fixed;inset:0; background:linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.85)); z-index:100003; align-items:center; justify-content:center; gap:10px; flex-direction:column; padding:20px;}
+  .card{background:rgba(255,255,255,0.03); padding:22px;border-radius:12px; color:#fff; width:100%; max-width:420px; text-align:center;}
+  .card button{margin-top:12px;padding:12px 16px;border-radius:12px;border:none;background:var(--accent);color:#000;font-weight:900;cursor:pointer; font-size:16px;}
+  .card button.secondary{background:#444;color:#fff;margin-top:8px;}
+  @media (min-width:900px){
+    #menu{left:-320px; width:320px;}
+    #newAlert{right:12px; left:auto; width:340px;}
+    #desktopOverlay{display:none;}
   }
 </style>
 </head>
@@ -65,18 +65,14 @@
 <button id="menuToggle" aria-label="Abrir menu">☰ Pontos</button>
 <div id="menu" aria-hidden="true"></div>
 
-<div id="app">
-  <div id="map" role="application" aria-label="Mapa"></div>
-</div>
+<div id="app"><div id="map" role="application" aria-label="Mapa"></div></div>
 
-<!-- arrow & status -->
 <div id="arrow" title="Direção" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2 L3 21 L12 17 L21 21 Z"></path></svg></div>
 <div id="statusBubble">Aguardando</div>
 
-<!-- popup novo agendamento -->
 <div id="newAlert">
   <span class="msg" id="alertText"></span>
-  <div class="sliderWrap" id="sliderWrap" style="margin-bottom:8px">
+  <div class="sliderWrap" id="sliderWrap" style="margin-bottom:10px">
     <div class="sliderText">Arraste para fechar →</div>
     <div class="sliderBar"><div class="sliderHandle" id="sliderHandle">≫</div></div>
   </div>
@@ -87,16 +83,16 @@
 
 <button id="confirmBtn" class="btn-confirm">Confirmar embarque</button>
 
-<!-- overlay inicial pede permissões -->
 <div id="desktopOverlay" aria-hidden="false">
   <div class="card">
-    <h2 style="color:#00ffd5;margin:0 0 8px">Permissões</h2>
-    <p style="color:#ddd;margin:0">Permita Notificações e GPS para que o app funcione corretamente. Clique em Permitir e aceite nas janelas do navegador.</p>
-    <button id="grantPermissionsBtn">Permitir GPS & Notificações</button>
+    <h2 style="color:#00ffd5;margin:0 0 8px">Bem-vindo</h2>
+    <p style="color:#ddd;margin:0">Toque em <strong>Iniciar</strong> para ativar GPS, audio e notificações (necessário para o WebApp funcionar corretamente no celular).</p>
+    <button id="grantPermissionsBtn">Iniciar</button>
     <button id="skipPermissionsBtn" class="secondary">Continuar sem permissões</button>
   </div>
 </div>
 
+<!-- libs -->
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
 
@@ -107,13 +103,13 @@ const SHEETS_API_KEY = "AIzaSyCkkBqKGxqPsBHK4-tQN_8DhdNMmX4gaqU";
 const RANGE = "A:E";
 const SHEETS_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${RANGE}?key=${SHEETS_API_KEY}`;
 
-const POLL_INTERVAL_MS = 12000; // intervalo de checagem da planilha
-const ULT_KEY = 'ultimaAtualizacao_v2';
+const POLL_INTERVAL_MS = 12000;
+const ULT_KEY = 'ultimaAtualizacao_mobile_v1';
 const EMBARCADOS_KEY = 'embarcados_v3';
-const SEEN_KEY = 'seen_requests_v1';
-const SKIPPED_PERMS_KEY = 'skip_perms_v1';
+const SEEN_KEY = 'seen_requests_mobile_v1';
+const SKIPPED_PERMS_KEY = 'skip_perms_mobile_v1';
 
-/* ================== ESTADO ================== */
+/* ================== STATE ================== */
 let allData = [], filteredData = [];
 let embarcados = JSON.parse(localStorage.getItem(EMBARCADOS_KEY) || '[]');
 let ultimaAtualizacao = Number(localStorage.getItem(ULT_KEY) || '0');
@@ -138,7 +134,7 @@ const desktopOverlay = document.getElementById('desktopOverlay');
 const grantPermissionsBtn = document.getElementById('grantPermissionsBtn');
 const skipPermissionsBtn = document.getElementById('skipPermissionsBtn');
 
-/* ================== PONTOS FIXOS ================== */
+/* ================== PONTOS ================== */
 const pontos = [
   {nome:"PORTARIA", coords:[-19.9978072,-43.9266727]},
   {nome:"Ponto 30", coords:[-19.9977078,-43.9289372]},
@@ -172,7 +168,7 @@ const pontos = [
   {nome:"Ponto 02", coords:[-20.001753,-43.9270223]}
 ];
 
-/* ================== UTIL ================== */
+/* ================== HELPERS ================== */
 function todayYMD(){ const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; }
 function parseSheetDateTime(val){
   if(!val) return null;
@@ -185,23 +181,23 @@ function parseSheetDateTime(val){
   }
   const dt = new Date(val); return isNaN(dt)?null:dt;
 }
-function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}___${(row[3]||'')}`; } // keep extra columns if present
+function bookingKey(row){ return `${(row[1]||'').trim()}___${(row[2]||'').trim()}___${(row[0]||'').trim()}___${(row[3]||'')}`; }
 
 /* ================== MAP INIT ================== */
-map = L.map('map', { zoomControl: true }).setView([-19.9978072, -43.9266727], 15);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+map = L.map('map', { zoomControl: false, attributionControl:false }).setView([-19.9978072, -43.9266727], 15);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
-/* ================== CAR ICON (aerial car) ================== */
-const carIconUrl = 'carro.png'; // aerial car icon
+/* ============ CAR ICON ============ */
+const carIconUrl = 'carro.png';
 const carIcon = L.icon({ iconUrl: carIconUrl, iconSize:[48,48], iconAnchor:[24,24] });
 
 function rotateMarkerIcon(marker, angleDegrees){
   if(!marker||!marker._icon) return;
   marker._icon.style.transform = `rotate(${angleDegrees}deg) translate(-50%, -50%)`;
-  marker._icon.style.transition = 'transform 0.2s linear';
+  marker._icon.style.transition = 'transform 0.18s linear';
 }
 
-/* ================== AUDIO & VOICE ========== */
+/* ================== AUDIO / VOICE ========== */
 let beepInterval = null;
 const audioCtx = (window.AudioContext||window.webkitAudioContext) ? new (window.AudioContext||window.webkitAudioContext)() : null;
 
@@ -218,7 +214,7 @@ function playBeepOnce(){
   g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.45);
   setTimeout(()=>{ try{o.stop();}catch(e){} }, 500);
 }
-function startAlertBeep(){ if(beepInterval) return; playBeepOnce(); beepInterval = setInterval(playBeepOnce, 1000); }
+function startAlertBeep(){ if(beepInterval) return; playBeepOnce(); beepInterval = setInterval(playBeepOnce, 1200); }
 function stopAlertBeep(){ if(beepInterval){ clearInterval(beepInterval); beepInterval = null; } }
 function speak(text){
   if('speechSynthesis' in window){
@@ -226,7 +222,7 @@ function speak(text){
   }
 }
 
-/* ================== ALERTA NOVA SOLICITAÇÃO (UI) ========== */
+/* ================== ALERT UI (touch slider) ========== */
 let dragging=false, startX=0, handleMax=0;
 function openNewAlert(message){
   newAlerts.push(message);
@@ -236,7 +232,7 @@ function openNewAlert(message){
   speak('Nova solicitação de transporte');
   notifyNative('Nova marcação', message.replace(/^Novo agendamento:\s*/, ''));
   sliderHandle.style.transform = 'translateX(0px)';
-  setTimeout(()=>{ handleMax = sliderWrap.clientWidth - sliderHandle.clientWidth - 8; }, 120);
+  setTimeout(()=>{ handleMax = Math.max(80, sliderWrap.clientWidth - sliderHandle.clientWidth - 12); }, 160);
 }
 function clearNewAlerts(){
   newAlerts = [];
@@ -245,7 +241,7 @@ function clearNewAlerts(){
   stopAlertBeep();
 }
 
-/* slider events */
+/* slider handlers for mobile */
 sliderHandle.addEventListener('pointerdown', (e)=>{
   dragging=true; startX = e.clientX; sliderHandle.setPointerCapture(e.pointerId); sliderHandle.style.cursor='grabbing';
 });
@@ -259,7 +255,7 @@ window.addEventListener('pointerup', (e)=>{
   if(!dragging) return;
   dragging=false; sliderHandle.style.cursor='grab';
   const dx = e.clientX - startX;
-  if(dx >= (handleMax*0.75 || 120)){
+  if(dx >= (handleMax*0.70 || 120)){
     clearNewAlerts();
   } else {
     sliderHandle.style.transition='transform 200ms'; sliderHandle.style.transform='translateX(0px)';
@@ -283,7 +279,7 @@ async function notifyNative(title, body){
   }
 }
 
-/* ================== CARREGAR MARCAÇÕES (Sheets) ========== */
+/* ================== LOAD BOOKINGS (Sheets) ========== */
 async function loadBookings(initial=false){
   try{
     const res = await fetch(SHEETS_URL);
@@ -293,7 +289,6 @@ async function loadBookings(initial=false){
     const today = todayYMD();
     let maxTimestamp = ultimaAtualizacao || 0;
 
-    // Build list of bookings matching criteria (today and >= 19:00 and not embarcados)
     const kept = rows.filter(r=>{
       const dt = parseSheetDateTime(r[0]);
       if(!dt) return false;
@@ -306,22 +301,20 @@ async function loadBookings(initial=false){
       return true;
     });
 
-    // Detect new rows: compare by a "seenRequests" set (persisted)
+    // Detect new rows: if already loaded once, notify every unseen row
     if(initialLoaded){
       kept.forEach(row => {
         const key = bookingKey(row);
         if(!seenRequests.has(key)){
           seenRequests.add(key);
-          // persist immediately to avoid duplicate triggers
           try{ localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(seenRequests))); }catch(e){}
-          // notify user for every new row (even duplicates of same name)
           const solicitante = row[1] || '';
           const ponto = row[2] || '';
           openNewAlert(`Novo agendamento: ${solicitante} - ${ponto}`);
         }
       });
     } else {
-      // First load: mark all existing as seen but do not notify
+      // mark present rows as seen on first load (no notifications)
       kept.forEach(row => {
         const key = bookingKey(row);
         if(!seenRequests.has(key)) seenRequests.add(key);
@@ -342,11 +335,11 @@ async function loadBookings(initial=false){
   }
 }
 
-/* ================== RENDER MENU ================== */
+/* ================== RENDER MENU (touch friendly) ========== */
 function renderMenu(rows){
   menu.innerHTML = '';
   if(!rows || rows.length === 0){
-    const no = document.createElement('div'); no.style.padding='12px'; no.style.color='#cfe';
+    const no = document.createElement('div'); no.style.padding='14px'; no.style.color='#cfe';
     no.textContent='Nenhum agendamento disponível (apenas reservas ≥ 19:00).';
     menu.appendChild(no); return;
   }
@@ -361,7 +354,7 @@ function renderMenu(rows){
   });
 }
 
-/* ================== NAVEGAÇÃO (rota pelas ruas com OSRM) ========== */
+/* ================== NAVIGATION (OSRM routing) ========== */
 function startNavigationTo(row){
   const nomePonto = (row[2]||'').trim().toLowerCase();
   currentDest = pontos.find(p=>p.nome.toLowerCase() === nomePonto);
@@ -371,7 +364,6 @@ function startNavigationTo(row){
   statusBubble.textContent = `Indo para ${currentDest.nome}`;
   menu.classList.remove('open');
 
-  // limpar rota anterior
   if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl = null; }
   if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker = null; }
 
@@ -386,7 +378,7 @@ function startNavigationTo(row){
       show:false,
       addWaypoints:false,
       createMarker: ()=>null,
-      lineOptions:{ styles:[{color:'cyan', weight:4}] },
+      lineOptions:{ styles:[{color:'cyan', weight:5}] },
       router: L.Routing.osrmv1({ serviceUrl:'https://router.project-osrm.org/route/v1' })
     }).addTo(map);
   } else {
@@ -394,7 +386,7 @@ function startNavigationTo(row){
   }
 }
 
-/* ================== GEOLOCALIZAÇÃO (real-time) ========== */
+/* ================== GEO & ARRIVAL ========== */
 function bearingBetween(a,b){
   const toRad = Math.PI/180, toDeg = 180/Math.PI;
   const lat1 = a[0]*toRad, lat2 = b[0]*toRad;
@@ -413,20 +405,17 @@ function checkArrival(lat,lng){
     statusBubble.textContent = `Chegou em ${currentDest.nome}`;
     confirmBtn.style.display = 'block';
     confirmBtn.onclick = ()=>{
-      // mark the first matching booking as embarcado (we identify by bookingKey)
       const row = filteredData.find(r=> (r[2]||'').trim().toLowerCase() === (currentDest.nome||'').trim().toLowerCase());
       if(row){
         const key = bookingKey(row);
         if(!embarcados.includes(key)) embarcados.push(key);
         localStorage.setItem(EMBARCADOS_KEY, JSON.stringify(embarcados));
-        // Also remove from seenRequests so future identical new rows still trigger
-        // (do NOT remove persisted seenRequests for this key because it's the one we completed)
       }
       if(routeControl){ try{ routeControl.remove(); }catch(e){} routeControl=null; }
       if(destMarker){ try{ map.removeLayer(destMarker); }catch(e){} destMarker=null; }
       currentDest = null;
       confirmBtn.style.display='none';
-      loadBookings(true); // refresh list
+      loadBookings(true);
       clearNewAlerts();
       statusBubble.textContent='Aguardando';
     };
@@ -457,7 +446,7 @@ function onGeoSuccess(pos){
           routeControl.setWaypoints([ L.latLng(lat,lng), wps[wps.length-1].latLng || L.latLng(currentDest.coords[0], currentDest.coords[1]) ]);
         }
       }
-    }catch(e){ /* ignore */ }
+    }catch(e){}
     const dist = map.distance([lat,lng], currentDest.coords);
     statusBubble.textContent = `Distância: ${Math.round(dist)} m`;
     checkArrival(lat,lng);
@@ -472,10 +461,9 @@ function startGeoWatch(){
   }
 }
 
-/* ================== PERMISSÕES E INÍCIO ================== */
+/* ================== PERMISSIONS FLOW (mobile friendly) ========== */
 async function startPermissionsFlow(){
   try{ await audioCtx.resume(); }catch(e){}
-  // request notification only once when default
   if(Notification.permission === 'default' && !localStorage.getItem(SKIPPED_PERMS_KEY)){
     try{ await Notification.requestPermission(); }catch(e){}
   }
@@ -490,8 +478,7 @@ menuToggle.addEventListener('click', ()=>{ menu.classList.toggle('open'); if('No
 grantPermissionsBtn.addEventListener('click', ()=> startPermissionsFlow());
 skipPermissionsBtn.addEventListener('click', ()=> skipPermissionsAndStart());
 
-/* ================== INICIALIZAÇÃO ================== */
-// Show overlay only when not skipped and permission is default (so user can grant)
+/* ================== INIT ================== */
 if(localStorage.getItem(SKIPPED_PERMS_KEY) || Notification.permission === 'granted' || Notification.permission === 'denied'){
   desktopOverlay.style.display='none';
   startGeoWatch();
@@ -499,16 +486,12 @@ if(localStorage.getItem(SKIPPED_PERMS_KEY) || Notification.permission === 'grant
   desktopOverlay.style.display='flex';
 }
 
-// initial load and poll
 loadBookings(true);
 setInterval(()=> loadBookings(false), POLL_INTERVAL_MS);
 
-/* Expose some helpers for debug (optional) */
-window.__driverApp = {
-  loadBookings, startGeoWatch, seenRequests,
-  embarcados, clearNewAlerts
-};
-</script>
+/* expose debug helpers */
+window.__driverApp = { loadBookings, startGeoWatch, seenRequests, embarcados, clearNewAlerts };
 
+</script>
 </body>
 </html>
