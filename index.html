@@ -190,7 +190,7 @@ map = L.map('map', { zoomControl: false, attributionControl:false }).setView([-1
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
 
 /* ============ CAR ICON ============ */
-const carIconUrl = 'https://cdn-icons-png.flaticon.com/512/743/743922.png';
+const carIconUrl = 'carro.png';
 const carIcon = L.icon({ iconUrl: carIconUrl, iconSize:[48,48], iconAnchor:[24,24] });
 
 function rotateMarkerIcon(marker, angleDegrees){
@@ -560,3 +560,4 @@ window.__driverApp = { loadBookings, startGeoWatch, seenRequests, embarcados, cl
 </script>
 </body>
 </html>
+
