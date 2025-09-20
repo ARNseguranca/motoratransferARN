@@ -491,6 +491,35 @@ function startGeoWatch(){
   }
 }
 
+// Função para verificar chegada e mostrar botão de confirmação
+function checkArrival(lat, lng) {
+  if (!currentDest) return;
+  const dist = map.distance([lat, lng], currentDest.coords);
+  if (dist < 35) { // chegou ao destino (ajuste a distância se quiser)
+    confirmBtn.style.display = 'block';
+    statusBubble.textContent = "Você chegou ao destino!";
+    speak("Você chegou ao destino. Confirme o embarque.");
+  } else {
+    confirmBtn.style.display = 'none';
+  }
+}
+
+// Adicione o evento do botão de confirmação
+confirmBtn.addEventListener('click', function() {
+  if (!currentDest) return;
+  // Marcar embarque no localStorage
+  const embarqueKey = bookingKey(
+    allData.find(r => (r[2]||'').trim().toLowerCase() === currentDest.nome.toLowerCase())
+  );
+  if (embarqueKey && !embarcados.includes(embarqueKey)) {
+    embarcados.push(embarqueKey);
+    localStorage.setItem(EMBARCADOS_KEY, JSON.stringify(embarcados));
+    speak("Embarque confirmado!");
+    confirmBtn.style.display = 'none';
+    statusBubble.textContent = "Embarque confirmado!";
+  }
+});
+
 /* ================== PERMISSIONS FLOW (mobile friendly) ========== */
 async function startPermissionsFlow(){
   try{ await audioCtx.resume(); }catch(e){}
@@ -560,4 +589,3 @@ window.__driverApp = { loadBookings, startGeoWatch, seenRequests, embarcados, cl
 </script>
 </body>
 </html>
-
